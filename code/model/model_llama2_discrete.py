@@ -94,7 +94,7 @@ class IS(pl.LightningModule):
         for param in self.parameters():
             param.requires_grad = False
         
-        self.text_emb=nn.Embedding(32,1024)
+        self.text_emb=nn.Embedding(32,1024)   # 将离散的整数索引转换为连续的向量表示 32：词汇表大小  1024：嵌入维度
         self.linear=nn.Sequential(
             nn.Linear(1024,8192),
             nn.ReLU(),

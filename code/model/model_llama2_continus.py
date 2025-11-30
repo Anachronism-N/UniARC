@@ -1,7 +1,7 @@
 import lightning.pytorch as pl
 from typing import Tuple, Union
 from transformers import AutoTokenizer, AutoModelForMaskedLM,AutoModelForCausalLM
-from module.modeling_llama_huggingface import LlamaForCausalLM
+from transformers import LlamaForCausalLM
 from module.transformer import (
     AdaptiveLayerNorm,
     LayerNorm,
@@ -22,18 +22,18 @@ from transformers import HubertModel, Wav2Vec2Processor
 from torch.nn import CrossEntropyLoss
 import os
 
-class Prenet(nn.Module):
-    def __init__(self, in_dim, sizes):
-        super(Prenet, self).__init__()
-        in_sizes = [in_dim] + sizes[:-1]
-        self.layers = nn.ModuleList(
-            [LinearNorm(in_size, out_size, bias=False)
-             for (in_size, out_size) in zip(in_sizes, sizes)])
+# class Prenet(nn.Module):
+#     def __init__(self, in_dim, sizes):
+#         super(Prenet, self).__init__()
+#         in_sizes = [in_dim] + sizes[:-1]
+#         self.layers = nn.ModuleList(
+#             [LinearNorm(in_size, out_size, bias=False)
+#              for (in_size, out_size) in zip(in_sizes, sizes)])
 
-    def forward(self, x):
-        for linear in self.layers:
-            x = F.dropout(F.relu(linear(x)), p=0.5, training=True)
-        return x
+#     def forward(self, x):
+#         for linear in self.layers:
+#             x = F.dropout(F.relu(linear(x)), p=0.5, training=True)
+#         return x
 
 class CustomCrossEntropyLoss(nn.Module):
     def __init__(self, tokenizer_id,ignore_index=-100, eos_penalty=10.0):
@@ -42,6 +42,10 @@ class CustomCrossEntropyLoss(nn.Module):
         self.eos_penalty = eos_penalty
         self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index)
         self.tokenizer_id=tokenizer_id
+        # ----------------------------------训练过程中解码代码------------------------------------------------
+        # llama_ckpt_path = "/commondocument/group2/ASRCompare/model/Llama-3.2-1B"
+        # self.text_tokenizer = AutoTokenizer.from_pretrained(llama_ckpt_path)  #只是为了查看输出，查看之后就注释掉
+        # ----------------------------------训练过程中解码代码------------------------------------------------
 
     def forward(self, logits, labels):
         # 计算基础的交叉熵损失
@@ -51,11 +55,23 @@ class CustomCrossEntropyLoss(nn.Module):
 
         # 找到 logits 中预测的 token
         predicted_tokens = torch.argmax(logits, dim=-1)
+        # print("predicted_tokens: ",predicted_tokens)
+        # print("labels:",labels)
+        # ----------------------------------训练过程中解码代码------------------------------------------------
+        # 尝试转成文本
+        # predicted_tokens_list = predicted_tokens.tolist()  # 转成 list
+        # # print("predicted_tokens_list:",predicted_tokens_list)
+        # predicted_text = self.text_tokenizer.decode(
+        #     predicted_tokens_list,
+        #     # skip_special_tokens=True  # 去掉 BOS/EOS/PAD 等特殊 token
+        # )
+        # # print("----------------------------------")
+        # print("predicted_text:", predicted_text)
+        # print(labels)
+        # ----------------------------------训练过程中解码代码------------------------------------------------
 
         # 找到 logits 中与 labels 的 eos 位置不匹配的地方
-        # print(self.tokenizer_id)
-        # print((predicted_tokens == self.tokenizer_id) )
-        # print(labels == self.tokenizer_id)
+
         eos_mismatch_mask = (predicted_tokens != labels) & ((predicted_tokens == self.tokenizer_id) | (labels == self.tokenizer_id))
 
         # 计算 eos 位置不匹配的损失
@@ -65,7 +81,7 @@ class CustomCrossEntropyLoss(nn.Module):
         total_loss = base_loss + mismatch_loss
         # print("baseloss:",base_loss)
         # print("mismatch_loss:",mismatch_loss)
-
+        
         return total_loss
 
 class IS(pl.LightningModule):
@@ -84,28 +100,50 @@ class IS(pl.LightningModule):
         layer: int = 24,
         ):
         super(IS, self).__init__()
-        self.audio_model = HubertModel.from_pretrained(hubert_ckpt_path)
+        if not hasattr(self, 'audio_model'):
+            # print("here!")
+            self.audio_model = HubertModel.from_pretrained(hubert_ckpt_path)
         self.processor = Wav2Vec2Processor.from_pretrained(hubert_ckpt_path)
         self.text_tokenizer = AutoTokenizer.from_pretrained(llama_ckpt_path)
-
-        self.llama=LlamaForCausalLM.from_pretrained(llama_ckpt_path,torch_dtype=torch.bfloat16)
+        # tokenizer.pad_token = "<|finetune_right_pad_id|>"  在special_tokens.map.json中找到的
+        # 确保设置了pad_token
         if self.text_tokenizer.pad_token is None:
-            self.text_tokenizer.pad_token = self.text_tokenizer.unk_token
+            self.text_tokenizer.pad_token = "<|finetune_right_pad_id|>"
+        
+        # self.llama=LlamaForCausalLM.from_pretrained(llama_ckpt_path,torch_dtype=torch.bfloat16)
+        self.llama=LlamaForCausalLM.from_pretrained(llama_ckpt_path) # 换成32,省得后面转换
+        # 检查是否需要更新嵌入层大小（如果添加了新的特殊标记）
+        if len(self.text_tokenizer) > self.llama.config.vocab_size:
+            self.llama.resize_token_embeddings(len(self.text_tokenizer))
+            
         self.bos_emb=self.llama.get_input_embeddings()(torch.tensor(self.text_tokenizer.bos_token_id))
         self.eos_emb=self.llama.get_input_embeddings()(torch.tensor(self.text_tokenizer.eos_token_id))
-        for param in self.parameters():
-            param.requires_grad = False
+
+        # ---------------------------------训练参数设定-----------------------------------
         
+        # 定义并确保这个层的参数是可训练的
         self.audio_embedding_last_Linear = nn.Sequential(
             nn.Linear(10240, 8192),
             nn.ReLU(),
-            nn.Linear(8192, 4096)
+            nn.Linear(8192, 2048)
         )
+        # 确保自定义层参数可训练
+
+        for param in self.parameters():
+            param.requires_grad = False
+
+        for param in self.audio_embedding_last_Linear.parameters():
+            param.requires_grad = True
+
+        # for param in self.audio_model.parameters():
+        #     param.requires_grad = False
+
+        # for param in self.llama.parameters():
+        #     param.requires_grad = True   # 想要冻结应该用False，此处仅为测试！
+
 
         #【[GPT_Begin]8  [Text_Begin]text[Text_End] [Audio_Begin]Audio[Audio_End] [GPT_End]9】NULL
         #7个token，最后一个表示其他无关的tts表征
-
-        
         
         self.accuracy5 = MulticlassAccuracy(
             num_classes=len(self.text_tokenizer),
@@ -128,8 +166,22 @@ class IS(pl.LightningModule):
         self.wrong_number=0
         self.loss_fn=CustomCrossEntropyLoss(self.text_tokenizer.eos_token_id)
 
+        
+        print("Initial sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
+
+    def on_load_checkpoint(self, checkpoint):
+        # 打印加载检查点前一个特定权重的总和
+        # print("Before loading checkpoint, sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
+        pass
+
+    def on_save_checkpoint(self, checkpoint):
+        # 打印保存检查点时一个特定权重的总和
+        # print("On saving checkpoint, sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
+        pass
+
     def forward(self,inputs):
         audio,output_text=inputs
+        # print("output_text:",output_text)
         batchsize=len(audio)
         #print(audio[0].shape[0])
         audio_len=[audio[i].shape[0]//320-1 for i in range(batchsize)]
@@ -138,41 +190,43 @@ class IS(pl.LightningModule):
         # for i in range(batchsize):
         #     audio[i]=audio[i][:audio_len[i]*10]
 
-        #print(audio_len)
+        # print("audio_len:",audio) 一致
 
         with torch.no_grad():
             input_values = self.processor(audio,  return_tensors="pt", sampling_rate=16000, padding=True).input_values.to(self.device)
-            input_values=input_values.half()
+            input_values=input_values.float()  #这里被我改成float32了
+            print("input_values",input_values)
             outputs=self.audio_model(input_values,output_hidden_states=True)['hidden_states']
-            outputs=outputs[-1]
-            # print(outputs)
-            print(outputs.shape)
+            outputs=outputs[-1]   # 音频
+            # print("outputs:",outputs)
+            # print("outputs.shape:",outputs.shape)
             time_len=outputs.shape[1]
             padded_time_len=(time_len+9)//10*10
-            # print(padded_time_len)
+            # print("padded_time_len",padded_time_len)
             outputs=F.pad(outputs,(0,0,0,padded_time_len-time_len))
-            # print(outputs.shape)
+            # print("outputs.shape",outputs.shape)
             outputs=outputs.view(batchsize,-1,10240)
 
+        # print("final_outputs:",outputs)
         # audio_inputs=padded_audio_input_values.contiguous().view(batchsize,padded_time_len//10,-1)
         audio_inputs=outputs.contiguous()
         # print(audio_inputs.shape)
         torch.cuda.empty_cache()
         audio_inputs=self.audio_embedding_last_Linear(audio_inputs)
-        #print(audio_len)
+        # print("audio_input:",audio_inputs)
         audio_lengths = torch.tensor(audio_len)
 
         x=[]
         len_x1=[]
         for i in range(batchsize):
-
             audio_input=audio_inputs[i,:audio_lengths[i],:]
             #print(text_input_pre.shape,audio_input.shape,text_input_post.shape)
             bos_emb=self.bos_emb.unsqueeze(0).to(self.device).detach()
             # eos_emb=self.eos_emb.unsqueeze(0).to(self.device).detach()
             input_x=torch.cat((bos_emb,audio_input),dim=0)
             x.append(input_x)
-            #print(text_lengths[i],audio_lengths[i])
+            # print("text_lengths[i],audio_lengths[i]",text_lengths[i],audio_lengths[i])
+            # print("input_x.shape[0]",input_x.shape[0])
             len_x1.append(input_x.shape[0])
         #x为一个list，保存的是每个batch的input，每一个元素代表一个text和一个audio拼接的input
         #len_x为一个list，保存的是每个batch的input的长度
@@ -182,47 +236,76 @@ class IS(pl.LightningModule):
         texts=[text+self.text_tokenizer.eos_token for text in output_text]
         texts=self.text_tokenizer(texts,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=True).to(self.device)
 
+        # print("pad_token_id:", self.text_tokenizer.pad_token_id)
+
         targets=texts["input_ids"].masked_fill(
             texts.input_ids == self.text_tokenizer.pad_token_id, -100
         )
-        # print(targets)
+        # print("targets:",targets)
         with torch.no_grad():
+            # print("texts[input_ids]:",texts["input_ids"])
             texts_embes=self.llama.get_input_embeddings()(texts["input_ids"])
 
-        inputs_embeds=torch.cat((x,texts_embes),dim=1)
+        # --------------------------------------ATTENTION------------------------------------------------
+        inputs_embeds=torch.cat((x,texts_embes),dim=1)  # 使用教师强制
+        # inputs_embeds=x  #注意这里，去掉了教师强制
         # print(x.shape,texts_embes.shape,inputs_embeds.shape)
 
         attns_text=texts.attention_mask
+        # print("attns_text",attns_text)
         attns_audio=make_pad_mask_number(audio_lengths+1).to(x.device)
         #加2是因为bos和eos
-        attns=torch.cat((attns_audio,attns_text),dim=1)
-        # print(attns_audio.shape,attns_text.shape,attns.shape)
-        # print(inputs_embeds.shape,attns.shape,targets.shape)
+        # --------------------------------------ATTENTION------------------------------------------------
+        attns=torch.cat((attns_audio,attns_text),dim=1)  # 使用教师强制
+        # attns=attns_audio  # #注意这里，去掉了教师强制
 
+        # print(attns_audio.shape,attns_text.shape,attns.shape)
+        # print("attns_audio:",attns_audio)
+        # print("attns_text:",attns_text)
+        print("attns:",attns)
+        # print(inputs_embeds.shape,attns.shape,targets.shape)
+        print("inputs_embeds:",inputs_embeds.shape,inputs_embeds)
         outputs=self.llama(
             inputs_embeds=inputs_embeds,
             attention_mask=attns,
-            return_dict=True)
+            return_dict=True
+            )
         # print(outputs.keys())
+
+        # print("output:",outputs.shape,outputs)
         hidden=outputs[0]
         len_target=targets.shape[1]
-        shift_logits = hidden[..., -len_target:-1, :].contiguous()
-        shift_labels = targets[..., 1:].contiguous()
+        # 去掉教师强制
+        
+        # shift_logits和lable的对应:
+        # 对应方式1:对齐除了bos以外的文本token
+        # shift_logits = hidden[..., -len_target:-1, :].contiguous()  # 对齐文本长度
+
+        # print("shift_logits:",shift_logits.shape,shift_logits)
+        # shift_labels = targets[...,1:].contiguous()
+
+        # print("shift_labels:",shift_labels.shape,shift_labels)
+        # 对应方式2:
+        shift_logits = hidden[..., -len_target-1:-1, :].contiguous()  # 从bos开始对齐
+        shift_labels = targets.contiguous()
+        
+        # 对应方式3:
+        # shift_logits = hidden.contiguous()  # 完整token列表尝试--报错,不行,其长度与target不一致
+
         loss_fct = self.loss_fn
-        shift_logits = shift_logits.view(-1, self.text_tokenizer.vocab_size)
+        # # 使用hidden的实际特征维度而不是直接使用vocab_size
+        feature_dim = hidden.size(-1)
+        # # print("feature_dim: ",feature_dim)
+        shift_logits = shift_logits.view(-1, feature_dim)
         shift_labels = shift_labels.view(-1)
-        shift_labels = shift_labels
-        loss = loss_fct(shift_logits, shift_labels)
-        # print(loss)
-
-
-
-
-
-
+        
+        loss = loss_fct(shift_logits, shift_labels)    # 这里是计算loss的输入
            
         return loss
+
+
     def training_step(self,batch,batch_idx):
+        print("train")
         loss=self(batch)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True,batch_size=len(batch[0]),sync_dist=True)
         return loss
@@ -230,20 +313,23 @@ class IS(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, self.parameters()), lr=0.00001, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-6)
         return optimizer
+
     def validation_step(self,batch,batch_idx):
+        print("validation")
         loss=self(batch)
         self.log("val_loss", loss, on_step=True, on_epoch=True, prog_bar=True,batch_size=len(batch[0]),sync_dist=True)
         return loss
 
-    
-
     def test_asr(self,inputs,filedir):
+        # 推理的时候进行输出的函数
         y=self.inference(inputs)
-        y_pre=y[0]
+        # print("inputs:",inputs)
+        
         print("y_pre:")
-        print(y_pre)
+        print(y)
         print("target:")
         print(inputs[1])
+
         try:
             # 提取两个位置之间的数（不包括这两个数）
             target_dir=os.path.join(filedir,"target.txt")
@@ -255,15 +341,16 @@ class IS(pl.LightningModule):
                 with open(output_dir,"w") as f:
                     pass
             with open(target_dir,"a") as f:
-                print(inputs[1][0])
-                print(1)
+                # print(inputs[1][0])
+                # print(1)
                 f.write(inputs[1][0]+"\n")
             with open(output_dir,"a") as f1:
-                print(2)
+                # print(2)
                 f1.write(y_pre+"\n")
             
         except:
             self.wrong_number+=1
+
     def topk_sampling(self,logits, top_k=10, top_p=1.0, temperature=1.0):
         # temperature: (`optional`) float
         #     The value used to module the next token probabilities. Must be strictly positive. Default to 1.0.
@@ -280,6 +367,7 @@ class IS(pl.LightningModule):
         # Sample
         token = torch.multinomial(F.softmax(logits, dim=-1), num_samples=1)
         return token
+        
     def top_k_top_p_filtering(
         self,logits, top_k=0, top_p=1.0, filter_value=-float("Inf"), min_tokens_to_keep=1
     ):
@@ -322,24 +410,28 @@ class IS(pl.LightningModule):
                 1, sorted_indices, sorted_indices_to_remove
             )
             logits[indices_to_remove] = filter_value
+
+        # pred_ids = logits.argmax(-1) 
+        # print("pred_ids:",tokenizer.batch_decode(pred_ids))
+
         return logits
+
     def inference(self,inputs):
+        self.eval()
         audio,output_text=inputs
         batchsize=len(audio)
         #print(audio[0].shape[0])
         audio_len=[audio[i].shape[0]//320-1 for i in range(batchsize)]
         audio_len=[(i+9)//10 for i in audio_len]
-        # # print(audio.shape)
-        # for i in range(batchsize):
-        #     audio[i]=audio[i][:audio_len[i]*10]
-
-        #print(audio_len)
+        # self.audio_model.eval()
 
         with torch.no_grad():
             input_values = self.processor(audio,  return_tensors="pt", sampling_rate=16000, padding=True).input_values.to(self.device)
             input_values=input_values.float()
+            print("inference_input_values",input_values)
             outputs=self.audio_model(input_values,output_hidden_states=True)['hidden_states']
             outputs=outputs[-1]
+            # print("inference_outputs:",outputs)
             time_len=outputs.shape[1]
             padded_time_len=(time_len+9)//10*10
             # print(padded_time_len)
@@ -347,14 +439,15 @@ class IS(pl.LightningModule):
             # print(outputs.shape)
             outputs=outputs.view(batchsize,-1,10240)
 
+        # print("final_outputs:",outputs)
         # audio_inputs=padded_audio_input_values.contiguous().view(batchsize,padded_time_len//10,-1)
         audio_inputs=outputs.contiguous()
-        # print(audio_inputs.shape)
         torch.cuda.empty_cache()
-        audio_inputs=self.audio_embedding_last_Linear(audio_inputs).half()
+        audio_inputs=self.audio_embedding_last_Linear(audio_inputs)
+        print("audio_input:",audio_inputs)
         #print(audio_len)
-        audio_lengths = torch.tensor(audio_len)
-
+        audio_lengths = torch.tensor(audio_len).to(self.device)
+        
         x=[]
         len_x1=[]
         for i in range(batchsize):
@@ -363,30 +456,109 @@ class IS(pl.LightningModule):
             #print(text_input_pre.shape,audio_input.shape,text_input_post.shape)
             bos_emb=self.bos_emb.unsqueeze(0).to(self.device).detach()
             # eos_emb=self.eos_emb.unsqueeze(0).to(self.device).detach()
-            input_x=torch.cat((bos_emb,audio_input),dim=0)
+            input_x=torch.cat((bos_emb,audio_input),dim=0)  # 修改点，我这里加了bos
             x.append(input_x)
             #print(text_lengths[i],audio_lengths[i])
             len_x1.append(input_x.shape[0])
+
         #x为一个list，保存的是每个batch的input，每一个元素代表一个text和一个audio拼接的input
         #len_x为一个list，保存的是每个batch的input的长度
         padded_x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
         x = torch.stack(list(padded_x), dim=0)
-        x=x.to(torch.bfloat16)
+
+        # print("x:",x.shape,x)
         
+        # print("eos_token_id=self.text_tokenizer.eos_token_id:",self.text_tokenizer.eos_token_id)
+
+        # --------------------将文本text token加上看模型能否正确回应-------------
+
+        # texts=[text+self.text_tokenizer.eos_token for text in output_text]
+        # texts=self.text_tokenizer(texts,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=True).to(self.device)
+
+        # targets=texts["input_ids"].masked_fill(
+        #     texts.input_ids == self.text_tokenizer.pad_token_id, -100
+        # )
+        # print("targets:",targets)
+
+        # with torch.no_grad():
+        #     # print("texts[input_ids]:",texts["input_ids"])
+        #     texts_embes=self.llama.get_input_embeddings()(texts["input_ids"])
         
-        # print(self.llama.dtype)
-        # print(x.dtype)
+        # x=torch.cat((x,texts_embes),dim=1)
+
+        print("x:",x.shape,x)
+        # --------------------将文本text token加上看模型能否正确回应-------------
+
+        # 加入attention
+        attention_mask = torch.ones(x.size()[:2], dtype=torch.long, device=x.device)
+
         with torch.no_grad():
             outputs = self.llama.generate(
                 inputs_embeds=x,
-                do_sample=False,  # Disable random sampling
-                num_beams=5,  # Use beam search with 5 beams
+                attention_mask=attention_mask,
+                do_sample=False,  # 使用确定性生成
+                num_beams=5,  # 对于短文本使用单beam更简单
                 num_return_sequences=1,
-                max_length=100,
+                # max_length=30,  # 短单词只需要很短的长度
+                max_new_tokens = 20,
                 pad_token_id=self.text_tokenizer.pad_token_id,
                 eos_token_id=self.text_tokenizer.eos_token_id,
+                bos_token_id=self.text_tokenizer.bos_token_id,
+                no_repeat_ngram_size=3, 
+                # early_stopping=True
             )
-        outputs=self.text_tokenizer.batch_decode(outputs,skip_special_tokens=True)
-        print(outputs)
-        return outputs
+        print("outputbase:",outputs)
 
+        outputs=self.text_tokenizer.batch_decode(
+            outputs,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=True
+        )
+
+        # print("inputs_embeds:",x.shape,x)
+
+        # --------------------尝试与训练对齐 output_train与训练时对齐-----------------
+        # with torch.no_grad():
+        #     output_train = self.llama(
+        #         inputs_embeds=x,
+        #         # attention_mask=attention_mask,
+        #     )
+
+        # # # 取logits
+
+        # # print("output_train:",output_train.shape,output_train)
+        # logits = output_train[0]     # [batch, vocab]
+
+        # print("logits:",logits.shape,logits)
+        # print("logits:",logits[:,:,0])
+
+        # feature_dim = 128256  # token总数
+        # # logits = logits.view(-1, feature_dim)
+        # logits = logits.view(-1)
+
+        # -----------------------------手动处理target的token------------------
+        # # len_target=5   # 固定长度
+        # len_target=targets.shape[1]   # 按照label的长度来设定从哪里计算,但是问题在于真正推理时没有
+        
+        # print("len_target:",len_target)
+
+        # shift_logits = logits[..., -len_target:-1, :].contiguous()   # 只要后面的预测内容
+        # # shift_logits = logits.contiguous()    # 全部内容
+
+        # # print("deal_shift_logits:",shift_logits)
+        # shift_logits = shift_logits.view(-1, feature_dim)
+        
+        # predicted_tokens = torch.argmax(shift_logits, dim=-1)
+        # print("predicted_tokens: ",predicted_tokens)
+
+        # predicted_tokens_list = predicted_tokens.tolist()  # 转成 list
+        # # # print("predicted_tokens_list:",predicted_tokens_list)
+        # predicted_text = self.text_tokenizer.decode(
+        #     predicted_tokens_list,
+        #     # skip_special_tokens=True  # 去掉 BOS/EOS/PAD 等特殊 token
+        # )
+        # # # print("----------------------------------")
+        # print("predicted_text:", predicted_text)
+
+        # -----------------------------手动处理target的token------------------
+        return outputs

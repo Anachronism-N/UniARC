@@ -28,6 +28,7 @@ class ASRDataset(Dataset):
                         self.utt_seeker[utt] = [line.strip().replace(".mrk", ".seq"), int(seek), int(num_bytes)]
 
         self.uttlist = list(self.utt_seeker.keys())
+        # print("list:",self.uttlist[:20])
         self.trans = {}
 
         with open(trans) as f:
@@ -56,6 +57,7 @@ class ASRDataset(Dataset):
 
     def __getitem__(self, idx):
         uttid = self.uttlist[idx]
+        # print("uttid:",uttid)
         data = self.__fetch_one_utt(uttid)
         len_audio = math.ceil(len(data) / 16000)
         return data, self.trans[uttid], len_audio

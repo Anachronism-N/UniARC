@@ -1,0 +1,38 @@
+# --- ASR & 深度学习相关大文件 ---
+
+# 忽略所有数据集音频文件
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+
+# 忽略模型权重文件 (这些通常几百MB甚至几GB)
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.onnx
+*.safetensors
+*.bin
+*.seq
+
+# 忽略压缩包
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# 忽略特定的大文件夹 (比如你放数据的目录)
+/data/
+/datasets/
+# /checkpoints/
+# /models/
+
+# --- 系统和编程语言产生的临时文件 ---
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
