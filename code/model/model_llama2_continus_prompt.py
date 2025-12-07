@@ -43,8 +43,8 @@ class CustomCrossEntropyLoss(nn.Module):
         self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index)
         self.tokenizer_id=tokenizer_id
         # ----------------------------------训练过程中解码代码------------------------------------------------
-        # llama_ckpt_path = "/commondocument/group2/ASRCompare/model/Llama-3.2-1B"
-        # self.text_tokenizer = AutoTokenizer.from_pretrained(llama_ckpt_path)  #只是为了查看输出，查看之后就注释掉
+        llama_ckpt_path = "/commondocument/group2/ASRCompare/model/Llama-3.2-1B"
+        self.text_tokenizer = AutoTokenizer.from_pretrained(llama_ckpt_path)  #只是为了查看输出，查看之后就注释掉
         # ----------------------------------训练过程中解码代码------------------------------------------------
 
     def forward(self, logits, labels):
@@ -59,15 +59,15 @@ class CustomCrossEntropyLoss(nn.Module):
         # print("labels:",labels)
         # ----------------------------------训练过程中解码代码------------------------------------------------
         # 尝试转成文本
-        # predicted_tokens_list = predicted_tokens.tolist()  # 转成 list
-        # # print("predicted_tokens_list:",predicted_tokens_list)
-        # predicted_text = self.text_tokenizer.decode(
-        #     predicted_tokens_list,
-        #     # skip_special_tokens=True  # 去掉 BOS/EOS/PAD 等特殊 token
-        # )
-        # print("----------------------------------")
-        # print("predicted_text:", predicted_text)
-        # print(labels)
+        predicted_tokens_list = predicted_tokens.tolist()  # 转成 list
+        # print("predicted_tokens_list:",predicted_tokens_list)
+        predicted_text = self.text_tokenizer.decode(
+            predicted_tokens_list,
+            # skip_special_tokens=True  # 去掉 BOS/EOS/PAD 等特殊 token
+        )
+        print("----------------------------------")
+        print("predicted_text:", predicted_text)
+        print(labels)
         # ----------------------------------训练过程中解码代码------------------------------------------------
 
         # 找到 logits 中与 labels 的 eos 位置不匹配的地方
@@ -230,8 +230,7 @@ class IS(pl.LightningModule):
             len_x1.append(input_x.shape[0])
         #x为一个list，保存的是每个batch的input，每一个元素代表一个text和一个audio拼接的input
         #len_x为一个list，保存的是每个batch的input的长度
-        padded_x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
-        x = torch.stack(list(padded_x), dim=0)
+        x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
         
         texts=[text+self.text_tokenizer.eos_token for text in output_text]
         texts=self.text_tokenizer(texts,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=True).to(self.device)
@@ -314,7 +313,8 @@ class IS(pl.LightningModule):
         shift_labels = shift_labels.view(-1)
         
         loss = loss_fct(shift_logits, shift_labels)    # 这里是计算loss的输入
-           
+        
+        print("")
         return loss
 
 
@@ -474,12 +474,14 @@ class IS(pl.LightningModule):
 
         x=[]
         len_x1=[]
+
+        bos_emb=self.bos_emb.unsqueeze(0).to(self.device).detach()
+
         for i in range(batchsize):
 
             audio_input=audio_inputs[i,:audio_lengths[i],:]
             #print(text_input_pre.shape,audio_input.shape,text_input_post.shape)
-            bos_emb=self.bos_emb.unsqueeze(0).to(self.device).detach()
-            # eos_emb=self.eos_emb.unsqueeze(0).to(self.device).detach()
+            
             print("bos,audio,prompt:",bos_emb.shape,audio_input.shape,prompt_embes.shape)
             input_x=torch.cat((bos_emb,audio_input,prompt_embes),dim=0)  # 修改点，我这里加了bos
             x.append(input_x)
@@ -488,8 +490,8 @@ class IS(pl.LightningModule):
 
         #x为一个list，保存的是每个batch的input，每一个元素代表一个text和一个audio拼接的input
         #len_x为一个list，保存的是每个batch的input的长度
-        padded_x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
-        x = torch.stack(list(padded_x), dim=0)
+        # padded_x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
+        # x = torch.stack(list(padded_x), dim=0)
 
         # print("x:",x.shape,x)
         
@@ -510,12 +512,12 @@ class IS(pl.LightningModule):
         #     texts_embes=self.llama.get_input_embeddings()(texts["input_ids"])
         
         # x=torch.cat((x,texts_embes),dim=1)
-
-        print("x:",x.shape,x)
         # --------------------将文本text token加上看模型能否正确回应-------------
 
-        # 加入attention
-        attention_mask = torch.ones(x.size()[:2], dtype=torch.long, device=x.device)
+        x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
+        attention_mask = make_pad_mask_number(torch.tensor(len_x1, device=self.device))
+        print("padded_x (right padded):", x.shape)
+        print("attention_mask (right padded):", attention_mask)
 
         with torch.no_grad():
             outputs = self.llama.generate(
