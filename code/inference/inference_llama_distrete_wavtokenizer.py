@@ -1,7 +1,7 @@
 import sys
 sys.path.append('/commondocument/group2/ASRCompare/code')
 
-from dataset.dataloader_continus import ASRDataset, collate_fn
+from dataset.dataloader_continus_wavtokenizer import ASRDataset, collate_fn
 
 from torch.utils.data import Dataset, DataLoader, RandomSampler
 
@@ -28,26 +28,26 @@ pl.seed_everything(3407)
 # print("0")
 # model=IS(hubert_ckpt_path=hubert_ckpt_path,llama_ckpt_path=llama_ckpt_path,layer=layer)
 model = IS.load_from_checkpoint(
-    "/commondocument/group2/ASRCompare/code/model/ckpt/wavtokenizer/epoch=99-train_loss=0.26-val_loss=0.24-ASR_wavtokenizer-3407.ckpt",
+    "/commondocument/group2/ASRCompare/code/model/ckpt/wavtokenizer/epoch=18-train_loss=0.379-val_loss=0.420-ER_wavtokenizer-3407.ckpt",
     wavtokenizer_ckpt_path=wavtokenizer_ckpt_path,
     wavtokenizer_config_path=wavtokenizer_config_path,
     hubert_ckpt_path=hubert_ckpt_path,
     llama_ckpt_path=llama_ckpt_path,
-    layer=layer
+    strict=False  # 忽略缺少的参数
 )
 
 model = model.float()
 # model = IS.load_from_checkpoint(
 #     "/commondocument/group2/ASRCompare/code/model/ckpt/epoch=45-train_loss=0.006-val_loss=0.001.ckpt")
 model=model.to("cuda:0")
-batchsize=1
+batchsize=4
 # print("0")
-test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/before_data_ER/mrk.scp", "/commondocument/group2/ASRCompare/data/before_data_ER/text.txt")
-# test_set_other=ASRDataset("/commondocument/group2/ASRCompare/data/mrk.scp", "/commondocument/group2/ASRCompare/data/text.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/3label_data_ER/mrk.scp", "/commondocument/group2/ASRCompare/data/3label_data_ER/text.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/test_clean/test_clean.scp", "/commondocument/group2/ASRCompare/data/test_clean/test_clean.txt")
+test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/iemocap_4class_data/test.scp", "/commondocument/group2/ASRCompare/data/iemocap_4class_data/test_labels.txt")
 dataloader_clean = DataLoader(test_set_clean, batch_size=batchsize, shuffle=False, collate_fn=collate_fn)
 # dataloader_other = DataLoader(test_set_other, batch_size=batchsize, shuffle=False, collate_fn=collate_fn)
 
-torch.cuda.empty_cache()
 # print("1")
 # state_dict = torch.load("/commondocument/group2/ASRCompare/code/model/ckpt/epoch=997-train_loss=0.00-val_loss=0.00.ckpt",map_location="cpu")
 # print("2")
@@ -60,7 +60,7 @@ model.eval()
 
 import tqdm
 
-fdir="/commondocument/group2/ASRCompare/code/inference/test"
+fdir="/commondocument/group2/ASRCompare/code/inference/wavtokenizer_ER"
 if not os.path.exists(fdir):
     os.makedirs(fdir)
 for i,batch in tqdm.tqdm(enumerate(dataloader_clean)):

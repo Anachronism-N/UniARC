@@ -46,7 +46,7 @@ class CustomCrossEntropyLoss(nn.Module):
 
         #  loss方案二
         weights = torch.ones(vocab_size)
-        weights[tokenizer_id] = 3  # 给 EOS 赋予 5 倍的权重（具体数值需调整）
+        weights[tokenizer_id] = 3  # 给 EOS 赋予 3 倍的权重（具体数值需调整）
         self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index,weight=weights)
 
 
@@ -145,6 +145,7 @@ class IS(pl.LightningModule):
             nn.Linear(10240, 8192),
             nn.ReLU(),
             nn.Linear(8192, 2048)
+            # nn.Linear(8192, 4096)
         )
         # 确保自定义层参数可训练
 
@@ -172,15 +173,52 @@ class IS(pl.LightningModule):
      
         # print("Initial sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
 
-    def on_load_checkpoint(self, checkpoint):
-        # 打印加载检查点前一个特定权重的总和
-        # print("Before loading checkpoint, sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
-        pass
+    # def on_load_checkpoint(self, checkpoint):
+    #     # 打印加载检查点前一个特定权重的总和
+    #     # print("Before loading checkpoint, sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
+    #     pass
 
     def on_save_checkpoint(self, checkpoint):
+        # 1. 获取模型中所有可训练参数的名称
+        trainable_param_names = {name for name, param in self.named_parameters() if param.requires_grad}
+        # print("Trainable parameter names:", trainable_param_names)
+        # print("Trainable parameters count:", len(trainable_param_names))
+        
+        # 2. 基于这些名称过滤checkpoint中的参数
+        trainable_params = {name: param for name, param in checkpoint['state_dict'].items() if name in trainable_param_names}
+        # print("trainable_params:", list(trainable_params.keys()))
+        # print("trainable_params count:", len(trainable_params))
+        
+        # 3. 更新checkpoint只保留可训练参数
+        checkpoint['state_dict'] = trainable_params
         # 打印保存检查点时一个特定权重的总和
         # print("On saving checkpoint, sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
-        pass
+
+    def on_load_checkpoint(self, checkpoint):
+        # 加载checkpoint时，只更新可训练的参数
+        loaded_state_dict = checkpoint['state_dict']
+        
+        # 打印检查点中包含的参数数量
+        print(f"Loaded checkpoint contains {len(loaded_state_dict)} parameters")
+        
+        # 只加载模型中存在且可训练的参数
+        model_state_dict = self.state_dict()
+        trainable_params = {name: param for name, param in self.named_parameters() if param.requires_grad}
+        print(f"Model has {len(trainable_params)} trainable parameters")
+        
+        # 过滤要加载的参数
+        filtered_state_dict = {}
+        for name, param in loaded_state_dict.items():
+            if name in model_state_dict and model_state_dict[name].requires_grad:
+                filtered_state_dict[name] = param
+                print(f"Loading parameter: {name}")
+        
+        print(f"Will load {len(filtered_state_dict)} parameters from checkpoint")
+        
+        # 使用strict=False允许只加载部分参数
+        self.load_state_dict(filtered_state_dict, strict=False)
+        
+        print("Checkpoint loaded successfully!")
 
     def forward(self,inputs):
         audio,output_text=inputs
@@ -199,8 +237,13 @@ class IS(pl.LightningModule):
             input_values = self.processor(audio,  return_tensors="pt", sampling_rate=16000, padding=True).input_values.to(self.device)
             input_values=input_values.float()  #这里被我改成float32了
             # print("input_values",input_values)
-            outputs=self.audio_model(input_values,output_hidden_states=True)['hidden_states']
-            outputs=outputs[-1]   # 音频
+
+            # 原方法：得到所有然后取最后一层hidden
+            # outputs=self.audio_model(input_values,output_hidden_states=True)['hidden_states']
+            # outputs=outputs[-1]   # 音频
+            # 现方法：取最后一层
+            outputs = self.audio_model(input_values).last_hidden_state
+            
             # print("outputs:",outputs)
             # print("outputs.shape:",outputs.shape)
             time_len=outputs.shape[1]
@@ -226,8 +269,7 @@ class IS(pl.LightningModule):
         
         for i in range(batchsize):
             audio_input=audio_inputs[i,:audio_lengths[i],:]
-            #print(text_input_pre.shape,audio_input.shape,text_input_post.shape)
-            
+            #print(text_input_pre.shape,audio_input.shape,text_input_post.shape)         
             # eos_emb=self.eos_emb.unsqueeze(0).to(self.device).detach()
             input_x=torch.cat((bos_emb,audio_input),dim=0)
             x.append(input_x)

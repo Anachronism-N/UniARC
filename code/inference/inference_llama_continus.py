@@ -5,7 +5,8 @@ from dataset.dataloader_continus import ASRDataset, collate_fn
 
 from torch.utils.data import Dataset, DataLoader, RandomSampler
 
-from model.model_llama2_continus import IS
+from model.model_llama2_continus_prompt import IS
+# from model.model_llama2_classifier import ISClassifier
 import torch
 from lightning.pytorch import Trainer, LightningDataModule, LightningModule, Callback, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
@@ -21,47 +22,68 @@ import logging
 layer=24
 hubert_ckpt_path="/commondocument/group2/ASRCompare/model/hubert-large-ls960-ft"
 llama_ckpt_path="/commondocument/group2/ASRCompare/model/Llama-3.2-1B"
+# llama_ckpt_path = "/commondocument/group2/ASRCompare/model/Meta-Llama-3.1-8B"
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 pl.seed_everything(3407)
 # print("0")
 # model=IS(hubert_ckpt_path=hubert_ckpt_path,llama_ckpt_path=llama_ckpt_path,layer=layer)
 model = IS.load_from_checkpoint(
-    "/commondocument/group2/ASRCompare/code/model/ckpt/continuous/epoch=99-train_loss=0.577-val_loss=0.474-linear_tf-3407_test_work.ckpt",
+    "/commondocument/group2/ASRCompare/code/model/ckpt/hubert_gtzan/epoch=12-train_loss=0.744-val_loss=0.848_continuous.ckpt",
     hubert_ckpt_path=hubert_ckpt_path,
     llama_ckpt_path=llama_ckpt_path,
-    layer=layer
+    layer=layer,
+    map_location=device,
+    strict=False  # 忽略缺少的参数
 )
 
 model = model.float()
 # model = IS.load_from_checkpoint(
 #     "/commondocument/group2/ASRCompare/code/model/ckpt/epoch=45-train_loss=0.006-val_loss=0.001.ckpt")
-model=model.to("cuda:0")
-batchsize=2
+# model=model.to("cuda:1")
+batchsize=4
 # print("0")
-test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data//before_data_ER/mrk.scp", "/commondocument/group2/ASRCompare/data//before_data_ER/text.txt")
-# test_set_other=ASRDataset("/commondocument/group2/ASRCompare/data/mrk.scp", "/commondocument/group2/ASRCompare/data/text.txt")
-dataloader_clean = DataLoader(test_set_clean, batch_size=batchsize, shuffle=True, collate_fn=collate_fn)
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/3label_data_ER/mrk.scp", "/commondocument/group2/ASRCompare/data/3label_data_ER/text.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/iemocap_4class_data/test.scp", "/commondocument/group2/ASRCompare/data/iemocap_4class_data/test_labels.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/Librispeech/test_clean/test_clean.scp", "/commondocument/group2/ASRCompare/data/Librispeech/test_clean/test_clean.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/Librispeech/test_other/test_other.scp", "/commondocument/group2/ASRCompare/data/Librispeech/test_other/test_other.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/MELD/meld_test.scp", "/commondocument/group2/ASRCompare/data/MELD/meld_test.txt")
+test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/GTZAN/test.scp", "/commondocument/group2/ASRCompare/data/GTZAN/test.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/clotho/clotho_test.scp", "/commondocument/group2/ASRCompare/data/clotho/clotho_test_all.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/us8k/test.scp", "/commondocument/group2/ASRCompare/data/us8k/test.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/SLURP_intent/test/test.scp", "/commondocument/group2/ASRCompare/data/SLURP_intent/test/test.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/sdd_final_split/test.scp", "/commondocument/group2/ASRCompare/data/sdd_final_split/test.txt")
+# test_set_clean=ASRDataset("/commondocument/group2/ASRCompare/data/cremad_final_split/test.scp", "/commondocument/group2/ASRCompare/data/cremad_final_split/test.txt")
+
+dataloader_clean = DataLoader(test_set_clean, batch_size=batchsize, shuffle=False, collate_fn=collate_fn)
 # dataloader_other = DataLoader(test_set_other, batch_size=batchsize, shuffle=False, collate_fn=collate_fn)
 
-torch.cuda.empty_cache()
 # print("1")
 # state_dict = torch.load("/commondocument/group2/ASRCompare/code/model/ckpt/epoch=997-train_loss=0.00-val_loss=0.00.ckpt",map_location="cpu")
 # print("2")
 # model.load_state_dict(state_dict,strict=False)  # 改回False，因为audio_model参数可能被冻结未保存
 # print("3")
 model.eval()
-model.llama.eval()
+# model.llama.eval()
 # torch.cuda.empty_cache()
 
 
 import tqdm
 
-fdir="/commondocument/group2/ASRCompare/code/inference/test"
+# fdir="/commondocument/group2/ASRCompare/code/inference/test"
+# fdir="/commondocument/group2/ASRCompare/code/inference/hubert_ER_MELD"
+fdir="/commondocument/group2/ASRCompare/code/inference/1B/hubert_gtzan"
+
 if not os.path.exists(fdir):
     os.makedirs(fdir)
 for i,batch in tqdm.tqdm(enumerate(dataloader_clean)):
-    print("\nchoice 1: test_asr\n")
+    # print("\nchoice 1: test_asr\n")
     model.test_asr(batch,fdir)
+    # clf = ISClassifier(hubert_ckpt_path=hubert_ckpt_path, llama_ckpt_path=llama_ckpt_path, layer=layer).to("cuda:0").float()
+    # y = clf.inference(batch)
+    # print("y_pre(classifier):")
+    # print(y)
     
     # print("choice 2: inference")
     # outputs = model.inference(batch)

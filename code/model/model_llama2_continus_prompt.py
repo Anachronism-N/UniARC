@@ -22,67 +22,41 @@ from transformers import HubertModel, Wav2Vec2Processor
 from torch.nn import CrossEntropyLoss
 import os
 
-# class Prenet(nn.Module):
-#     def __init__(self, in_dim, sizes):
-#         super(Prenet, self).__init__()
-#         in_sizes = [in_dim] + sizes[:-1]
-#         self.layers = nn.ModuleList(
-#             [LinearNorm(in_size, out_size, bias=False)
-#              for (in_size, out_size) in zip(in_sizes, sizes)])
-
-#     def forward(self, x):
-#         for linear in self.layers:
-#             x = F.dropout(F.relu(linear(x)), p=0.5, training=True)
-#         return x
 
 class CustomCrossEntropyLoss(nn.Module):
-    def __init__(self, tokenizer_id,ignore_index=-100, eos_penalty=10.0):
+    def __init__(self, tokenizer_id,vocab_size,ignore_index=-100, eos_penalty=0.1):
         super(CustomCrossEntropyLoss, self).__init__()
         self.ignore_index = ignore_index
         self.eos_penalty = eos_penalty
-        self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index)
+        weights = torch.ones(vocab_size)
+        weights[tokenizer_id] = 1  # 给 EOS 赋予 3 倍的权重（具体数值需调整）
+        self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index,weight=weights)
+
         self.tokenizer_id=tokenizer_id
+        self.ignore_index = ignore_index
+
         # ----------------------------------训练过程中解码代码------------------------------------------------
-        llama_ckpt_path = "/commondocument/group2/ASRCompare/model/Llama-3.2-1B"
-        self.text_tokenizer = AutoTokenizer.from_pretrained(llama_ckpt_path)  #只是为了查看输出，查看之后就注释掉
+        # llama_ckpt_path = "/commondocument/group2/ASRCompare/model/Llama-3.2-1B"
+        # self.text_tokenizer = AutoTokenizer.from_pretrained(llama_ckpt_path)  #只是为了查看输出，查看之后就注释掉
         # ----------------------------------训练过程中解码代码------------------------------------------------
 
     def forward(self, logits, labels):
-        # 计算基础的交叉熵损失
-        # print(logits.shape)
-        # print(labels.shape)
+        # # ----------------------------------训练过程中解码代码------------------------------------------------
+        # # 尝试转成文本
+        # predicted_tokens = torch.argmax(logits, dim=-1)
+        # predicted_tokens_list = predicted_tokens.tolist()  # 转成 list
+        # # print("predicted_tokens_list:",predicted_tokens_list)
+        # predicted_text = self.text_tokenizer.decode(
+        #     predicted_tokens_list,
+        #     # skip_special_tokens=True  # 去掉 BOS/EOS/PAD 等特殊 token
+        # )
+        # print("----------------------------------")
+        # print("predicted_text:", predicted_text)
+        # print(labels)
+        # # ----------------------------------训练过程中解码代码------------------------------------------------
         base_loss = self.loss_fct(logits, labels)
 
-        # 找到 logits 中预测的 token
-        predicted_tokens = torch.argmax(logits, dim=-1)
-        # print("predicted_tokens: ",predicted_tokens)
-        # print("labels:",labels)
-        # ----------------------------------训练过程中解码代码------------------------------------------------
-        # 尝试转成文本
-        predicted_tokens_list = predicted_tokens.tolist()  # 转成 list
-        # print("predicted_tokens_list:",predicted_tokens_list)
-        predicted_text = self.text_tokenizer.decode(
-            predicted_tokens_list,
-            # skip_special_tokens=True  # 去掉 BOS/EOS/PAD 等特殊 token
-        )
-        print("----------------------------------")
-        print("predicted_text:", predicted_text)
-        print(labels)
-        # ----------------------------------训练过程中解码代码------------------------------------------------
-
-        # 找到 logits 中与 labels 的 eos 位置不匹配的地方
-
-        eos_mismatch_mask = (predicted_tokens != labels) & ((predicted_tokens == self.tokenizer_id) | (labels == self.tokenizer_id))
-
-        # 计算 eos 位置不匹配的损失
-        mismatch_loss = eos_mismatch_mask.sum().float() * self.eos_penalty
-
-        # 计算总损失
-        total_loss = base_loss + mismatch_loss
-        # print("baseloss:",base_loss)
-        # print("mismatch_loss:",mismatch_loss)
-        
-        return total_loss
+        return base_loss
 
 class IS(pl.LightningModule):
     def __init__(self,
@@ -125,7 +99,8 @@ class IS(pl.LightningModule):
         self.audio_embedding_last_Linear = nn.Sequential(
             nn.Linear(10240, 8192),
             nn.ReLU(),
-            nn.Linear(8192, 2048)
+            nn.Linear(8192, 2048)      #1B
+            # nn.Linear(8192, 4096)
         )
         # 确保自定义层参数可训练
 
@@ -134,50 +109,57 @@ class IS(pl.LightningModule):
 
         for param in self.audio_embedding_last_Linear.parameters():
             param.requires_grad = True
-
-        # for param in self.audio_model.parameters():
-        #     param.requires_grad = False
-
-        # for param in self.llama.parameters():
-        #     param.requires_grad = True   # 想要冻结应该用False，此处仅为测试！
-
-
-        #【[GPT_Begin]8  [Text_Begin]text[Text_End] [Audio_Begin]Audio[Audio_End] [GPT_End]9】NULL
-        #7个token，最后一个表示其他无关的tts表征
         
-        self.accuracy5 = MulticlassAccuracy(
-            num_classes=len(self.text_tokenizer),
-            top_k=5,
-            average="micro",
-            multidim_average="global",
-            )
-        self.accuracy1 = MulticlassAccuracy(
-            num_classes=len(self.text_tokenizer),
-            top_k=1,
-            average="micro",
-            multidim_average="global",
-            )
-        self.accuracy10 = MulticlassAccuracy(
-            num_classes=len(self.text_tokenizer),
-            top_k=10,
-            average="micro",
-            multidim_average="global",
-            )
         self.wrong_number=0
-        self.loss_fn=CustomCrossEntropyLoss(self.text_tokenizer.eos_token_id)
+        vocab_size = len(self.text_tokenizer)
+        # print("vocab_size：", vocab_size)
+        self.loss_fn=CustomCrossEntropyLoss(self.text_tokenizer.eos_token_id,vocab_size)
 
         
         # print("Initial sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
 
     def on_load_checkpoint(self, checkpoint):
-        # 打印加载检查点前一个特定权重的总和
-        # print("Before loading checkpoint, sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
-        pass
+        # 加载checkpoint时，只更新可训练的参数
+        loaded_state_dict = checkpoint['state_dict']
+        
+        # 打印检查点中包含的参数数量
+        print(f"Loaded checkpoint contains {len(loaded_state_dict)} parameters")
+        
+        # 只加载模型中存在且可训练的参数
+        model_state_dict = self.state_dict()
+        trainable_params = {name: param for name, param in self.named_parameters() if param.requires_grad}
+        print(f"Model has {len(trainable_params)} trainable parameters")
+        
+        # 过滤要加载的参数
+        filtered_state_dict = {}
+        for name, param in loaded_state_dict.items():
+            if name in model_state_dict and model_state_dict[name].requires_grad:
+                filtered_state_dict[name] = param
+                print(f"Loading parameter: {name}")
+        
+        print(f"Will load {len(filtered_state_dict)} parameters from checkpoint")
+        
+        # 使用strict=False允许只加载部分参数
+        self.load_state_dict(filtered_state_dict, strict=False)
+        
+        print("Checkpoint loaded successfully!")
+
 
     def on_save_checkpoint(self, checkpoint):
+        # 1. 获取模型中所有可训练参数的名称
+        trainable_param_names = {name for name, param in self.named_parameters() if param.requires_grad}
+        # print("Trainable parameter names:", trainable_param_names)
+        # print("Trainable parameters count:", len(trainable_param_names))
+        
+        # 2. 基于这些名称过滤checkpoint中的参数
+        trainable_params = {name: param for name, param in checkpoint['state_dict'].items() if name in trainable_param_names}
+        # print("trainable_params:", list(trainable_params.keys()))
+        # print("trainable_params count:", len(trainable_params))
+        
+        # 3. 更新checkpoint只保留可训练参数
+        checkpoint['state_dict'] = trainable_params
         # 打印保存检查点时一个特定权重的总和
         # print("On saving checkpoint, sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
-        pass
 
     def forward(self,inputs):
         audio,output_text=inputs
@@ -196,8 +178,7 @@ class IS(pl.LightningModule):
             input_values = self.processor(audio,  return_tensors="pt", sampling_rate=16000, padding=True).input_values.to(self.device)
             input_values=input_values.float()  #这里被我改成float32了
             # print("input_values",input_values)
-            outputs=self.audio_model(input_values,output_hidden_states=True)['hidden_states']
-            outputs=outputs[-1]   # 音频
+            outputs = self.audio_model(input_values).last_hidden_state
             # print("outputs:",outputs)
             # print("outputs.shape:",outputs.shape)
             time_len=outputs.shape[1]
@@ -211,17 +192,17 @@ class IS(pl.LightningModule):
         # audio_inputs=padded_audio_input_values.contiguous().view(batchsize,padded_time_len//10,-1)
         audio_inputs=outputs.contiguous()
         # print(audio_inputs.shape)
-        torch.cuda.empty_cache()
         audio_inputs=self.audio_embedding_last_Linear(audio_inputs)
         # print("audio_input:",audio_inputs)
         audio_lengths = torch.tensor(audio_len)
 
         x=[]
         len_x1=[]
+        bos_emb=self.bos_emb.unsqueeze(0).to(self.device).detach()
+
         for i in range(batchsize):
             audio_input=audio_inputs[i,:audio_lengths[i],:]
             #print(text_input_pre.shape,audio_input.shape,text_input_post.shape)
-            bos_emb=self.bos_emb.unsqueeze(0).to(self.device).detach()
             # eos_emb=self.eos_emb.unsqueeze(0).to(self.device).detach()
             input_x=torch.cat((bos_emb,audio_input),dim=0)
             x.append(input_x)
@@ -230,14 +211,23 @@ class IS(pl.LightningModule):
             len_x1.append(input_x.shape[0])
         #x为一个list，保存的是每个batch的input，每一个元素代表一个text和一个audio拼接的input
         #len_x为一个list，保存的是每个batch的input的长度
-        x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
+        padded_x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
+        x = torch.stack(list(padded_x), dim=0)
         
         texts=[text+self.text_tokenizer.eos_token for text in output_text]
-        texts=self.text_tokenizer(texts,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=True).to(self.device)
+        texts=self.text_tokenizer(texts,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=False).to(self.device)
 
         # print("Texts_token",texts)
         # ---------------------------------------------PROMPT-------------------------------------------
-        prompt = "Identify the text corresponding to the speech: "
+        # prompt = "Identify the text corresponding to the speech: "   # ASR
+        # prompt = "Identify the emotion corresponding to the speech: "    # ER
+        prompt = "Identify the music genre corresponding to the audio: "     # music
+        # prompt = "Identify the description corresponding to the audio:"       #clotho
+        # prompt = "Identify the urban sound category corresponding to the audio: "     #urbansound
+        # prompt = "Identify the intent corresponding to the speech: "                   #IC
+        # prompt = "Generate a caption for the music: "     #song describer
+
+
         prompt = self.text_tokenizer(prompt,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=False).to(self.device)
         # ---------------------------------------------PROMPT-------------------------------------------
 
@@ -314,7 +304,6 @@ class IS(pl.LightningModule):
         
         loss = loss_fct(shift_logits, shift_labels)    # 这里是计算loss的输入
         
-        print("")
         return loss
 
 
@@ -334,36 +323,39 @@ class IS(pl.LightningModule):
         self.log("val_loss", loss, on_step=True, on_epoch=True, prog_bar=True,batch_size=len(batch[0]),sync_dist=True)
         return loss
 
-    def test_asr(self,inputs,filedir):
-        # 推理的时候进行输出的函数
-        y=self.inference(inputs)
-        # print("inputs:",inputs)
+    def test_asr(self, inputs, filedir):
+        # 推理
+        # y 是一个列表，例如 ['prediction_text_1', 'prediction_text_2']
+        y = self.inference(inputs)
         
-        print("y_pre:")
-        print(y)
-        print("target:")
-        print(inputs[1])
+        # target 也是一个列表，例如 ['target_text_1', 'target_text_2']
+        targets = inputs[1]
+
+        # 打印调试，这能帮你发现问题
+        print("y_pre:", y)
+        print("target:", targets)
+
+        target_dir = os.path.join(filedir, "target.txt")
+        output_dir = os.path.join(filedir, "output.txt")
 
         try:
-            # 提取两个位置之间的数（不包括这两个数）
-            target_dir=os.path.join(filedir,"target.txt")
-            output_dir=os.path.join(filedir,"output.txt")
-            if not os.path.exists(target_dir):
-                with open(target_dir,"w") as f:
-                    pass
-            if not os.path.exists(output_dir):
-                with open(output_dir,"w") as f:
-                    pass
-            with open(target_dir,"a") as f:
-                # print(inputs[1][0])
-                # print(1)
-                f.write(inputs[1][0]+"\n")
-            with open(output_dir,"a") as f1:
-                # print(2)
-                f1.write(y_pre+"\n")
-            
-        except:
-            self.wrong_number+=1
+            with open(target_dir, "a", encoding='utf-8') as f_target, \
+                open(output_dir, "a", encoding='utf-8') as f_output:
+                
+                # 使用 zip 同时遍历 预测值(pred) 和 真实值(targ)
+                for pred, targ in zip(y, targets):
+                    # 【核心修改】
+                    # 1. 将 pred 内部的换行符替换为空格，确保一个预测只占一行
+                    pred_cleaned = str(pred).replace('\n', ' ').replace('\r', ' ')
+                    
+                    # 2. 写入文件，并在末尾手动添加一个换行符作为行分隔
+                    f_target.write(str(targ) + "\n")
+                    f_output.write(pred_cleaned + "\n")
+
+        except Exception as e:
+            print(f"Error writing to file: {e}")
+            # 最好也记录一下 self.wrong_number += 1
+            self.wrong_number += 1
 
     def topk_sampling(self,logits, top_k=10, top_p=1.0, temperature=1.0):
         # temperature: (`optional`) float
@@ -456,21 +448,27 @@ class IS(pl.LightningModule):
         # print("final_outputs:",outputs)
         # audio_inputs=padded_audio_input_values.contiguous().view(batchsize,padded_time_len//10,-1)
         audio_inputs=outputs.contiguous()
-        torch.cuda.empty_cache()
+
         audio_inputs=self.audio_embedding_last_Linear(audio_inputs)
-        print("audio_input:",audio_inputs)
-        #print(audio_len)
+        # print("audio_input:",audio_inputs)
+        # print(audio_len)
         audio_lengths = torch.tensor(audio_len).to(self.device)
         
          # ---------------------------------------------PROMPT-------------------------------------------
-        prompt = "Identify the text corresponding to the speech: "
+        # prompt = "Identify the text corresponding to the speech: "
+        # prompt = "Identify the emotion corresponding to the speech: "    # ER
+        prompt = "Identify the music genre corresponding to the audio: "     # music
+        # prompt = "Identify the description corresponding to the audio:"       #clotho
+        # prompt = "Identify the urban sound category corresponding to the audio:"     #urbansound
+        # prompt = "Identify the intent corresponding to the speech: "               #IC
+        # prompt = "Generate a caption for the music: "     #song describer
+
         prompt = self.text_tokenizer(prompt,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=False).to(self.device)
 
         with torch.no_grad():
             prompt_embes = self.llama.get_input_embeddings()(prompt["input_ids"])
         prompt_embes = prompt_embes.squeeze(0)
         # --------------------------------------PROMPT---------------------------------------------------
-
 
         x=[]
         len_x1=[]
@@ -482,110 +480,54 @@ class IS(pl.LightningModule):
             audio_input=audio_inputs[i,:audio_lengths[i],:]
             #print(text_input_pre.shape,audio_input.shape,text_input_post.shape)
             
-            print("bos,audio,prompt:",bos_emb.shape,audio_input.shape,prompt_embes.shape)
+            # print("bos,audio,prompt:",bos_emb.shape,audio_input.shape,prompt_embes.shape)
             input_x=torch.cat((bos_emb,audio_input,prompt_embes),dim=0)  # 修改点，我这里加了bos
             x.append(input_x)
             #print(text_lengths[i],audio_lengths[i])
             len_x1.append(input_x.shape[0])
 
-        #x为一个list，保存的是每个batch的input，每一个元素代表一个text和一个audio拼接的input
-        #len_x为一个list，保存的是每个batch的input的长度
-        # padded_x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
-        # x = torch.stack(list(padded_x), dim=0)
-
-        # print("x:",x.shape,x)
+        # --- 【修改重点】改为手动左填充 (Left Padding) ---
         
-        # print("eos_token_id=self.text_tokenizer.eos_token_id:",self.text_tokenizer.eos_token_id)
+        # 1. 获取最大长度
+        max_len = max(len_x1)
+        embed_dim = x[0].shape[-1]
 
-        # --------------------将文本text token加上看模型能否正确回应-------------
+        # 2. 初始化全0的 Embeddings 和 Attention Mask
+        # padding_value=0 对于 embedding 是合适的，前提是 mask 设置正确
+        padded_x = torch.zeros((batchsize, max_len, embed_dim), dtype=x[0].dtype, device=self.device)
+        attention_mask = torch.zeros((batchsize, max_len), dtype=torch.long, device=self.device)
 
-        # texts=[text+self.text_tokenizer.eos_token for text in output_text]
-        # texts=self.text_tokenizer(texts,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=True).to(self.device)
+        # 3. 填入数据（右对齐 = 左填充）
+        for i, seq in enumerate(x):
+            length = len_x1[i]
+            # 核心逻辑：数据放在每一行的 [max_len - length : ]
+            padded_x[i, max_len - length:, :] = seq
+            # Mask 对应位置设为 1
+            attention_mask[i, max_len - length:] = 1
 
-        # targets=texts["input_ids"].masked_fill(
-        #     texts.input_ids == self.text_tokenizer.pad_token_id, -100
-        # )
-        # print("targets:",targets)
+        # print("padded_x (left padded):", padded_x.shape,padded_x)
+        # print("attention_mask (left padded):", attention_mask)
 
-        # with torch.no_grad():
-        #     # print("texts[input_ids]:",texts["input_ids"])
-        #     texts_embes=self.llama.get_input_embeddings()(texts["input_ids"])
-        
-        # x=torch.cat((x,texts_embes),dim=1)
-        # --------------------将文本text token加上看模型能否正确回应-------------
-
-        x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
-        attention_mask = make_pad_mask_number(torch.tensor(len_x1, device=self.device))
-        print("padded_x (right padded):", x.shape)
-        print("attention_mask (right padded):", attention_mask)
-
+        # --- Generate 调用 ---
         with torch.no_grad():
-            outputs = self.llama.generate(
-                inputs_embeds=x,
+            outputs = self.llama.generate(              
+                inputs_embeds=padded_x,
                 attention_mask=attention_mask,
-                do_sample=False,  # 使用确定性生成
-                num_beams=5,  # 对于短文本使用单beam更简单
-                num_return_sequences=1,
-                # max_length=30,  # 短单词只需要很短的长度
-                max_new_tokens = 20,
+                do_sample=False,
+                num_beams=5,
+                max_new_tokens=200,
                 pad_token_id=self.text_tokenizer.pad_token_id,
                 eos_token_id=self.text_tokenizer.eos_token_id,
-                bos_token_id=self.text_tokenizer.bos_token_id,
-                no_repeat_ngram_size=3, 
-                # early_stopping=True
+                repetition_penalty=1.15,
+                no_repeat_ngram_size=4
             )
-        # print("outputbase:",outputs)
+        
+        # print("outputbase:", outputs)
 
-        outputs=self.text_tokenizer.batch_decode(
+        outputs = self.text_tokenizer.batch_decode(
             outputs,
             skip_special_tokens=True,
             clean_up_tokenization_spaces=True
         )
-
-        # print("inputs_embeds:",x.shape,x)
-
-        # --------------------尝试与训练对齐 output_train与训练时对齐-----------------
-        # with torch.no_grad():
-        #     output_train = self.llama(
-        #         inputs_embeds=x,
-        #         # attention_mask=attention_mask,
-        #     )
-
-        # # # 取logits
-
-        # # print("output_train:",output_train.shape,output_train)
-        # logits = output_train[0]     # [batch, vocab]
-
-        # print("logits:",logits.shape,logits)
-        # print("logits:",logits[:,:,0])
-
-        # feature_dim = 128256  # token总数
-        # # logits = logits.view(-1, feature_dim)
-        # logits = logits.view(-1)
-
-        # -----------------------------手动处理target的token------------------
-        # # len_target=5   # 固定长度
-        # len_target=targets.shape[1]   # 按照label的长度来设定从哪里计算,但是问题在于真正推理时没有
-        
-        # print("len_target:",len_target)
-
-        # shift_logits = logits[..., -len_target:-1, :].contiguous()   # 只要后面的预测内容
-        # # shift_logits = logits.contiguous()    # 全部内容
-
-        # # print("deal_shift_logits:",shift_logits)
-        # shift_logits = shift_logits.view(-1, feature_dim)
-        
-        # predicted_tokens = torch.argmax(shift_logits, dim=-1)
-        # print("predicted_tokens: ",predicted_tokens)
-
-        # predicted_tokens_list = predicted_tokens.tolist()  # 转成 list
-        # # # print("predicted_tokens_list:",predicted_tokens_list)
-        # predicted_text = self.text_tokenizer.decode(
-        #     predicted_tokens_list,
-        #     # skip_special_tokens=True  # 去掉 BOS/EOS/PAD 等特殊 token
-        # )
-        # # # print("----------------------------------")
-        # print("predicted_text:", predicted_text)
-
-        # -----------------------------手动处理target的token------------------
         return outputs
+    
