@@ -5,7 +5,7 @@ from dataset.dataloader_continus import ASRDataset, collate_fn
 
 from torch.utils.data import Dataset, DataLoader, RandomSampler
 
-from model.model_llama2_continus_prompt import IS   # 注意要实现不同功能需要从我改后的代码引入
+from model.model_llama2_wavlm_prompt import IS   # 注意要实现不同功能需要从我改后的代码引入
 # from model.model_llama2_wavtokenizer_prompt import IS   # 注意要实现不同功能需要从我改后的代码引入
 import torch
 from lightning.pytorch import Trainer, LightningDataModule, LightningModule, Callback, seed_everything
@@ -27,13 +27,14 @@ from lightning.pytorch.callbacks import Timer, ModelCheckpoint, EarlyStopping
 
 layer=24
 
+wavlm_ckpt_path="/commondocument/group2/ASRCompare/model/wavlm/wavlm-large"
+# llama_ckpt_path="/commondocument/group2/ASRCompare/model/Llama-3.2-1B"
 hubert_ckpt_path="/commondocument/group2/ASRCompare/model/hubert-large-ls960-ft"
-llama_ckpt_path="/commondocument/group2/ASRCompare/model/Llama-3.2-1B"
-# llama_ckpt_path = "/commondocument/group2/ASRCompare/model/Meta-Llama-3.1-8B"
+llama_ckpt_path = "/commondocument/group2/ASRCompare/model/Meta-Llama-3.1-8B"
 # ckpt_path="/commondocument/group2/ASRCompare/code/model/ckpt/hubert_ASR/epoch=49-train_loss=0.011-val_loss=0.006-linear_ASR-3407_reckpt.ckpt"
 pl.seed_everything(3407)
 
-model=IS(hubert_ckpt_path=hubert_ckpt_path,llama_ckpt_path=llama_ckpt_path,layer=layer)
+model=IS(hubert_ckpt_path=hubert_ckpt_path, wavlm_ckpt_path=wavlm_ckpt_path,llama_ckpt_path=llama_ckpt_path,layer=layer)
 # model = model.float()
 
 # ------------------------------    从已有ckpt继续训练    ---------------------------------
@@ -54,8 +55,8 @@ batchsize=8
 # trainset = ASRDataset("/commondocument/group2/ASRCompare/data/MELD/meld_train.scp", "/commondocument/group2/ASRCompare/data/MELD/meld_train.txt")
 # valset = ASRDataset("/commondocument/group2/ASRCompare/data/MELD/meld_dev.scp", "/commondocument/group2/ASRCompare/data/MELD/meld_dev.txt")
 
-# trainset = ASRDataset("/commondocument/group2/ASRCompare/data/Librispeech/train/train-clean-100.scp", "/commondocument/group2/ASRCompare/data/Librispeech/train/train-clean-100.txt")
-# valset = ASRDataset("/commondocument/group2/ASRCompare/data/Librispeech/dev_clean/dev_clean.scp", "/commondocument/group2/ASRCompare/data/Librispeech/dev_clean/dev_clean.txt")
+# trainset = ASRDataset("/commondocument/group2/ASRCompare/data/train/train-clean-100.scp", "/commondocument/group2/ASRCompare/data/train/train-clean-100.txt")
+# valset = ASRDataset("/commondocument/group2/ASRCompare/data/dev_clean/dev_clean.scp", "/commondocument/group2/ASRCompare/data/dev_clean/dev_clean.txt")
 
 # trainset = ASRDataset("/commondocument/group2/ASRCompare/data/3label_data_ER/mrk.scp", "/commondocument/group2/ASRCompare/data/3label_data_ER/text.txt")
 # valset = ASRDataset("/commondocument/group2/ASRCompare/data/3label_data_ER/mrk.scp", "/commondocument/group2/ASRCompare/data/3label_data_ER/text.txt")
@@ -63,11 +64,14 @@ batchsize=8
 # trainset = ASRDataset("/commondocument/group2/ASRCompare/data/iemocap_4class_data/train.scp", "/commondocument/group2/ASRCompare/data/iemocap_4class_data/train_labels.txt")
 # valset = ASRDataset("/commondocument/group2/ASRCompare/data/iemocap_4class_data/val.scp", "/commondocument/group2/ASRCompare/data/iemocap_4class_data/valid_labels.txt")
 
-trainset = ASRDataset("/commondocument/group2/ASRCompare/data/GTZAN/train.scp", "/commondocument/group2/ASRCompare/data/GTZAN/train.txt")
-valset = ASRDataset("/commondocument/group2/ASRCompare/data/GTZAN/valid.scp", "/commondocument/group2/ASRCompare/data/GTZAN/valid.txt")
+# trainset = ASRDataset("/commondocument/group2/ASRCompare/data/GTZAN/train.scp", "/commondocument/group2/ASRCompare/data/GTZAN/train.txt")
+# valset = ASRDataset("/commondocument/group2/ASRCompare/data/GTZAN/valid.scp", "/commondocument/group2/ASRCompare/data/GTZAN/valid.txt")
 
 # trainset = ASRDataset("/commondocument/group2/ASRCompare/data/clotho/clotho_train.scp", "/commondocument/group2/ASRCompare/data/clotho/clotho_train.txt")
 # valset = ASRDataset("/commondocument/group2/ASRCompare/data/clotho/clotho_dev.scp", "/commondocument/group2/ASRCompare/data/clotho/clotho_dev.txt")
+
+# trainset = ASRDataset("/commondocument/group2/ASRCompare/data/Librispeech/train/train-all-960.scp", "/commondocument/group2/ASRCompare/data/Librispeech/train/train-all-960.txt")
+# valset = ASRDataset("/commondocument/group2/ASRCompare/data/Librispeech/dev_clean/dev_all.scp", "/commondocument/group2/ASRCompare/data/Librispeech/dev_clean/dev_all.txt")
 
 # trainset = ASRDataset("/commondocument/group2/ASRCompare/data/us8k/train.scp", "/commondocument/group2/ASRCompare/data/us8k/train.txt")
 # valset = ASRDataset("/commondocument/group2/ASRCompare/data/us8k/dev.scp", "/commondocument/group2/ASRCompare/data/us8k/dev.txt")
@@ -75,18 +79,17 @@ valset = ASRDataset("/commondocument/group2/ASRCompare/data/GTZAN/valid.scp", "/
 # trainset = ASRDataset("/commondocument/group2/ASRCompare/data/SLURP_intent/train/train.scp", "/commondocument/group2/ASRCompare/data/SLURP_intent/train/train.txt")
 # valset = ASRDataset("/commondocument/group2/ASRCompare/data/SLURP_intent/devel/devel.scp", "/commondocument/group2/ASRCompare/data/SLURP_intent/devel/devel.txt")
 
-# trainset = ASRDataset("/commondocument/group2/ASRCompare/data/Librispeech/train/train-all-960.scp", "/commondocument/group2/ASRCompare/data/Librispeech/train/train-all-960.txt")
-# valset = ASRDataset("/commondocument/group2/ASRCompare/data/Librispeech/dev_clean/dev_all.scp", "/commondocument/group2/ASRCompare/data/Librispeech/dev_clean/dev_all.txt")
+# trainset = ASRDataset("/commondocument/group2/ASRCompare/data/clotho/clotho_train.scp", "/commondocument/group2/ASRCompare/data/clotho/clotho_train.txt")
+# valset = ASRDataset("/commondocument/group2/ASRCompare/data/clotho/clotho_dev.scp", "/commondocument/group2/ASRCompare/data/clotho/clotho_dev.txt")
 
 # trainset = ASRDataset("/commondocument/group2/ASRCompare/data/sdd_final_split/train.scp", "/commondocument/group2/ASRCompare/data/sdd_final_split/train.txt")
 # valset = ASRDataset("/commondocument/group2/ASRCompare/data/sdd_final_split/val.scp", "/commondocument/group2/ASRCompare/data/sdd_final_split/val.txt")
 
-# trainset = ASRDataset("/commondocument/group2/ASRCompare/data/cremad_final_split/train.scp", "/commondocument/group2/ASRCompare/data/cremad_final_split/train.txt")
-# valset = ASRDataset("/commondocument/group2/ASRCompare/data/cremad_final_split/val.scp", "/commondocument/group2/ASRCompare/data/cremad_final_split/val.txt")
+trainset = ASRDataset("/commondocument/group2/ASRCompare/data/cremad_final_split/train.scp", "/commondocument/group2/ASRCompare/data/cremad_final_split/train.txt")
+valset = ASRDataset("/commondocument/group2/ASRCompare/data/cremad_final_split/val.scp", "/commondocument/group2/ASRCompare/data/cremad_final_split/val.txt")
 
 # trainset = ASRDataset("/commondocument/group2/ASRCompare/data/Librispeech/train/train-clean-100.scp", "/commondocument/group2/ASRCompare/data/Librispeech/train/train-clean-100.txt")
 # valset = ASRDataset("/commondocument/group2/ASRCompare/data/Librispeech/dev_clean/dev_clean.scp", "/commondocument/group2/ASRCompare/data/Librispeech/dev_clean/dev_clean.txt")
-
 
 # We use a random sampler to shuffle the indices
 train_sampler = RandomSampler(trainset)
@@ -97,7 +100,7 @@ val_loader = DataLoader(valset, batch_size=batchsize, collate_fn=collate_fn)
 
 
 checkpoint_callback = ModelCheckpoint(
-        dirpath='/commondocument/group2/ASRCompare/code/model/ckpt/hubert_gtzan',
+        dirpath='/commondocument/group2/ASRCompare/code/model/8B_ckpt/wavlm_cremad',
         filename='{epoch:02d}-{train_loss:.3f}-{val_loss:.3f}_continuous',
         save_top_k=2,
         every_n_epochs=1,
@@ -117,10 +120,10 @@ early_stop_callback = EarlyStopping(
 trainer = pl.Trainer(
     max_epochs=150,
     profiler=None,   # "simple"
-    logger=TensorBoardLogger(name='hubert_gtzan',save_dir='/commondocument/group2/ASRCompare/code/train/log'),
+    logger=TensorBoardLogger(name='wavlm_cremad',save_dir='/commondocument/group2/ASRCompare/code/train/8B_log'),
     accelerator='gpu',
     num_nodes=1,
-    devices=[4,5,6,7],
+    devices=[0,1,2,3],
     log_every_n_steps=20,
     precision="bf16-mixed", 
     callbacks=[checkpoint_callback, early_stop_callback],

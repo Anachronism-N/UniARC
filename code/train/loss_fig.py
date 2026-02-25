@@ -4,7 +4,7 @@ import glob
 import os
 
 # 训练完成后加载 TensorBoard 日志数据
-log_dir = '/commondocument/group2/ASRCompare/code/train/log/hubert_ASR/version_2'  # 你的 TensorBoard 日志路径
+log_dir = '/commondocument/group2/ASRCompare/code/train/log/hubert_ASR/version_33'  # 你的 TensorBoard 日志路径
 # 根据日志可视化train loss 曲线
 event_files = glob.glob(os.path.join(log_dir, 'events.*'))
 

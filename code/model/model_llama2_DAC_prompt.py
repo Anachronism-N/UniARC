@@ -22,11 +22,10 @@ from transformers import HubertModel, Wav2Vec2Processor
 from torch.nn import CrossEntropyLoss
 import os
 import numpy as np
-import sys
-sys.path.append('/commondocument/group2/ASRCompare/model/WavTokenizer')
 
-from decoder.pretrained import WavTokenizer
-from encoder.utils import convert_audio
+import dac
+from audiotools import AudioSignal
+
 
 class CustomCrossEntropyLoss(nn.Module):
     def __init__(self, tokenizer_id,vocab_size,ignore_index=-100, eos_penalty=0.1):
@@ -73,15 +72,12 @@ class IS(pl.LightningModule):
         d_model: int = 1024,
         nhead: int = 8,
         num_layers: int = 10,
-        wavtokenizer_ckpt_path: str = None,
-        wavtokenizer_config_path: str = None,
-        hubert_ckpt_path: str = None,
+        DAC_path: str = None,
         llama_ckpt_path: str = None,
         # layer: int = 24,
         ):
         super(IS, self).__init__()
-        self.wavtokenizer = WavTokenizer.from_pretrained0802(wavtokenizer_config_path, wavtokenizer_ckpt_path)
-        self.processor = Wav2Vec2Processor.from_pretrained(hubert_ckpt_path)
+        self.dac = dac.DAC.load(DAC_path)
         self.text_tokenizer = AutoTokenizer.from_pretrained(llama_ckpt_path)
         # tokenizer.pad_token = "<|finetune_right_pad_id|>"  在special_tokens.map.json中找到的
         # 确保设置了pad_token
@@ -101,9 +97,10 @@ class IS(pl.LightningModule):
         
         # 定义并确保这个层的参数是可训练的
         self.audio_embedding_last_Linear = nn.Sequential(
-            nn.Linear(5120, 8192),  #这个参数尚存疑512
+            nn.Linear(10240, 8192),  #这个参数尚存疑512
             nn.ReLU(),
-            nn.Linear(8192, 2048)
+            # nn.Linear(8192, 2048)
+            nn.Linear(8192, 4096)
         )
         # 确保自定义层参数可训练
 
@@ -200,18 +197,12 @@ class IS(pl.LightningModule):
 
     def calculate_feature_lengths(self, audio_sample_lengths):
         """
-        根据音频的原始采样点数，计算 WavTokenizer 输出的特征序列长度。
+        根据音频的原始采样点数，计算输出的特征序列长度。
         """
-        # 原始音频（16kHz）会先经过 convert_audio 变成 1.5 倍（24kHz）。
-        # total_stride 是 WavTokenizer 模型本身对于 24kHz 音频的下采样率。
-        # 根据最终测试 (48000 * 1.5) / 225 = 320。
         total_stride = 320
 
-        # 先计算重采样后的长度，再进行下采样计算
-        resampled_lengths = audio_sample_lengths * 1.5
-        # feat_lengths = resampled_lengths // total_stride   # 这里根据debug的过程疑似是上采样
-        feat_lengths = (resampled_lengths + total_stride - 1) // total_stride
-        
+        feat_lengths = audio_sample_lengths // total_stride
+
         # 确保返回的是整数张量
         return feat_lengths.to(torch.long)
 
@@ -220,26 +211,28 @@ class IS(pl.LightningModule):
         padded_audios, output_text, audio_sample_lengths = inputs
         batchsize = padded_audios.shape[0]
         downsample_factor = 10 
-        
+        # print(padded_audios.abs().max())
+
         # 步骤 2: 批处理特征提取
         with torch.no_grad():   
             w = padded_audios.to(self.device) / 32768.0
             # 这里的 '1' 就代表了单声道 (mono channel)
             w = w.unsqueeze(1)
             # w = w.float()
-            w = convert_audio(w, 16000, 24000, 1)
+            # print("w:",w.shape,w)
+            signal = AudioSignal(w,sample_rate=16000)
+            # print("signal:",signal)
+            # print("signal.audio_data:",signal.audio_data)
+            # signal = self.dac.preprocess(signal.audio_data, signal.sample_rate)
+            # print("signal_after:",signal)
+            features,_, _, _, _ = self.dac.encode(signal.audio_data)
+            # print("feature:",features,features.shape)
 
-            w = w.squeeze(1)
-            # bandwidth_id = torch.tensor([0] * batchsize, device=self.device)
-            bandwidth_id = torch.tensor([0], device=self.device)
-            # WavTokenizer 输出形状为 [B, D_feat, T_feat]
-            features, _ = self.wavtokenizer.encode_infer(w, bandwidth_id=bandwidth_id)
-            
-            # 【关键修正】交换维度，以匹配后续代码期望的 [B, T_feat, D_feat] 格式
             features = features.transpose(1, 2).contiguous()
-            
+            # print("feature_trans:",features,features.shape)
             # 使用辅助函数计算每个样本的真实特征长度 (结果是一个张量)
             feat_lengths = self.calculate_feature_lengths(audio_sample_lengths)
+            # print("feat_lengths:",feat_lengths)
 
         # 步骤 3: 特征拼接与降采样 (完全向量化)
         max_feat_len = features.shape[1]
@@ -262,7 +255,7 @@ class IS(pl.LightningModule):
 
         # 步骤 4: 高效计算下采样后的新长度
         audio_lengths = (feat_lengths + downsample_factor - 1) // downsample_factor
-
+        # print("audio_lengths:",audio_lengths)
         # 步骤 5: 通过线性层
         audio_inputs = self.audio_embedding_last_Linear(stacked_features)
 
@@ -285,7 +278,14 @@ class IS(pl.LightningModule):
         texts = self.text_tokenizer(texts, return_tensors="pt", padding="longest", truncation=True, add_special_tokens=False).to(self.device)
 
         # prompt = "Identify the text corresponding to the speech: "
-        prompt = "Identify the emotion corresponding to the speech: "    # ER
+        # prompt = "Identify the emotion corresponding to the speech: "    # ER
+        # prompt = "Identify the music genre corresponding to the audio: "     # music
+        # prompt = "Identify the description corresponding to the audio:"       #clotho
+        # prompt = "Identify the urban sound category corresponding to the audio:"     #urbansound
+        # prompt = "Identify the intent corresponding to the speech: "               #IC
+        # prompt = "Identify the description corresponding to the audio:"       #clotho
+        prompt = "Generate a caption for the music: "     #song describer
+        
         prompt = self.text_tokenizer(prompt, return_tensors="pt", padding="longest", truncation=True, add_special_tokens=False).to(self.device)
 
         targets = texts["input_ids"].masked_fill(
@@ -463,20 +463,18 @@ class IS(pl.LightningModule):
             w = padded_audios.to(self.device) / 32768.0
             
             # --- “三明治”包装法，确保函数安全调用 ---
-            w_for_convert = w.unsqueeze(1)
-            w_resampled = convert_audio(w_for_convert, 16000, 24000, 1)
-            w = w_resampled.squeeze(1)
-            # -----------------------------------------
-            
-            # 直接使用 Python 整数 0 作为 bandwidth_id
-            bandwidth_id = 0
-            features, _ = self.wavtokenizer.encode_infer(w, bandwidth_id=bandwidth_id)
-            
-            # 转置特征张量以匹配后续代码期望
+            w = w.unsqueeze(1)
+            signal = AudioSignal(w,sample_rate=16000)
+            signal = self.dac.preprocess(signal.audio_data, signal.sample_rate)
+
+            features,_, _, _, _ = self.dac.encode(signal)
+            # print("feature:",features,features.shape)
+
             features = features.transpose(1, 2).contiguous()
             
-            # 使用辅助函数计算特征长度
+            # 使用辅助函数计算每个样本的真实特征长度 (结果是一个张量)
             feat_lengths = self.calculate_feature_lengths(audio_sample_lengths)
+
 
             downsample_factor = 10
             
@@ -503,7 +501,14 @@ class IS(pl.LightningModule):
             # 3. 后续为 Llama.generate 准备输入的逻辑 (这部分保持不变)
             # ----------------------------------------------------------------------
             # prompt = "Identify the text corresponding to the speech: "
-            prompt = "Identify the emotion corresponding to the speech: "    # ER
+            # prompt = "Identify the emotion corresponding to the speech: "    # ER
+            # prompt = "Identify the music genre corresponding to the audio: "     # music
+            # prompt = "Identify the description corresponding to the audio:"       #clotho
+            # prompt = "Identify the urban sound category corresponding to the audio:"     #urbansound
+            # prompt = "Identify the intent corresponding to the speech: "               #IC
+            # prompt = "Identify the description corresponding to the audio:"       #clotho
+            prompt = "Generate a caption for the music: "     #song describer
+
             prompt = self.text_tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to(self.device)
 
             with torch.no_grad():

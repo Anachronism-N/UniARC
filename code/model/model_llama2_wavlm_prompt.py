@@ -17,16 +17,11 @@ import torch.nn.functional as F
 import torch.nn.utils.rnn as rnn_utils
 from module.utils import make_pad_mask_number, Transpose
 
-from transformers import HubertModel, Wav2Vec2Processor
+from transformers import WavLMModel, Wav2Vec2Processor
 
 from torch.nn import CrossEntropyLoss
 import os
-import numpy as np
-import sys
-sys.path.append('/commondocument/group2/ASRCompare/model/WavTokenizer')
 
-from decoder.pretrained import WavTokenizer
-from encoder.utils import convert_audio
 
 class CustomCrossEntropyLoss(nn.Module):
     def __init__(self, tokenizer_id,vocab_size,ignore_index=-100, eos_penalty=0.1):
@@ -36,6 +31,7 @@ class CustomCrossEntropyLoss(nn.Module):
         weights = torch.ones(vocab_size)
         weights[tokenizer_id] = 1  # 给 EOS 赋予 3 倍的权重（具体数值需调整）
         self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index,weight=weights)
+
         self.tokenizer_id=tokenizer_id
         self.ignore_index = ignore_index
 
@@ -73,14 +69,15 @@ class IS(pl.LightningModule):
         d_model: int = 1024,
         nhead: int = 8,
         num_layers: int = 10,
-        wavtokenizer_ckpt_path: str = None,
-        wavtokenizer_config_path: str = None,
         hubert_ckpt_path: str = None,
+        wavlm_ckpt_path: str = None,
         llama_ckpt_path: str = None,
-        # layer: int = 24,
+        layer: int = 24,
         ):
         super(IS, self).__init__()
-        self.wavtokenizer = WavTokenizer.from_pretrained0802(wavtokenizer_config_path, wavtokenizer_ckpt_path)
+        if not hasattr(self, 'audio_model'):
+            # print("here!")
+            self.audio_model = WavLMModel.from_pretrained(wavlm_ckpt_path)
         self.processor = Wav2Vec2Processor.from_pretrained(hubert_ckpt_path)
         self.text_tokenizer = AutoTokenizer.from_pretrained(llama_ckpt_path)
         # tokenizer.pad_token = "<|finetune_right_pad_id|>"  在special_tokens.map.json中找到的
@@ -101,9 +98,10 @@ class IS(pl.LightningModule):
         
         # 定义并确保这个层的参数是可训练的
         self.audio_embedding_last_Linear = nn.Sequential(
-            nn.Linear(5120, 8192),  #这个参数尚存疑512
+            nn.Linear(10240, 8192),
             nn.ReLU(),
-            nn.Linear(8192, 2048)
+            # nn.Linear(8192, 2048)      #1B
+            nn.Linear(8192, 4096)
         )
         # 确保自定义层参数可训练
 
@@ -112,48 +110,13 @@ class IS(pl.LightningModule):
 
         for param in self.audio_embedding_last_Linear.parameters():
             param.requires_grad = True
-
-        # for param in self.audio_model.parameters():
-        #     param.requires_grad = False
-
-        # for param in self.llama.parameters():
-        #     param.requires_grad = True   # 想要冻结应该用False，此处仅为测试！
         
         self.wrong_number=0
         vocab_size = len(self.text_tokenizer)
+        # print("vocab_size：", vocab_size)
         self.loss_fn=CustomCrossEntropyLoss(self.text_tokenizer.eos_token_id,vocab_size)
 
-        # ==============================测试=======================================
-        # print("="*50)
-        # print("Running stride test to find the correct total_stride...")
-        # self.wavtokenizer.eval() # 切换到评估模式
-        # with torch.no_grad():
-        #     # 创建一个假的音频输入：batch_size=1, 长度为3秒的音频 (3 * 16000 = 48000个采样点)
-        #     # 使用一个较长的音频可以避免边界效应带来的误差
-        #     dummy_input = torch.randn(1, 48000) 
-            
-        #     # 将它通过您在forward函数中使用的相同预处理流程
-        #     dummy_input = dummy_input.to(self.device) # 假设模型已在GPU上
-        #     dummy_input = convert_audio(dummy_input, 16000, 24000, 1)
-        #     bandwidth_id = torch.tensor([0], device=self.device)
-            
-        #     # 获取特征输出
-        #     features, _ = self.wavtokenizer.encode_infer(dummy_input, bandwidth_id=bandwidth_id)
-            
-        #     # features 的形状是 [batch_size, time_steps, feature_dim]
-        #     # 我们需要的就是中间的 time_steps
-        #     input_length = 48000
-        #     output_feature_length = features.shape[1]
-            
-        #     print("features.shape: ", features.shape)
-        #     calculated_stride = input_length / output_feature_length
-            
-        #     print(f"Input audio length: {input_length}")
-        #     print(f"Output feature length: {output_feature_length}")
-        #     print(f"Calculated Stride (Input / Output): {calculated_stride}")
-        #     print("Please use the integer part of this value as your `total_stride`.")
-        # print("="*50)
-
+        
         # print("Initial sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
 
     def on_load_checkpoint(self, checkpoint):
@@ -173,7 +136,7 @@ class IS(pl.LightningModule):
         for name, param in loaded_state_dict.items():
             if name in model_state_dict and model_state_dict[name].requires_grad:
                 filtered_state_dict[name] = param
-                # print(f"Loading parameter: {name}")
+                print(f"Loading parameter: {name}")
         
         print(f"Will load {len(filtered_state_dict)} parameters from checkpoint")
         
@@ -181,6 +144,7 @@ class IS(pl.LightningModule):
         self.load_state_dict(filtered_state_dict, strict=False)
         
         print("Checkpoint loaded successfully!")
+
 
     def on_save_checkpoint(self, checkpoint):
         # 1. 获取模型中所有可训练参数的名称
@@ -198,138 +162,149 @@ class IS(pl.LightningModule):
         # 打印保存检查点时一个特定权重的总和
         # print("On saving checkpoint, sum of audio_model.encoder.layers[0].attention.k_proj.weight:", self.audio_model.encoder.layers[0].attention.k_proj.weight.sum())
 
-    def calculate_feature_lengths(self, audio_sample_lengths):
-        """
-        根据音频的原始采样点数，计算 WavTokenizer 输出的特征序列长度。
-        """
-        # 原始音频（16kHz）会先经过 convert_audio 变成 1.5 倍（24kHz）。
-        # total_stride 是 WavTokenizer 模型本身对于 24kHz 音频的下采样率。
-        # 根据最终测试 (48000 * 1.5) / 225 = 320。
-        total_stride = 320
+    def forward(self,inputs):
+        audio,output_text=inputs
+        # print("output_text:",output_text)
+        batchsize=len(audio)
+        #print(audio[0].shape[0])
+        audio_len=[audio[i].shape[0]//320-1 for i in range(batchsize)]
+        audio_len=[(i+9)//10 for i in audio_len]
+        # # print(audio.shape)
+        # for i in range(batchsize):
+        #     audio[i]=audio[i][:audio_len[i]*10]
 
-        # 先计算重采样后的长度，再进行下采样计算
-        resampled_lengths = audio_sample_lengths * 1.5
-        # feat_lengths = resampled_lengths // total_stride   # 这里根据debug的过程疑似是上采样
-        feat_lengths = (resampled_lengths + total_stride - 1) // total_stride
-        
-        # 确保返回的是整数张量
-        return feat_lengths.to(torch.long)
+        # print("audio_len:",audio) 一致
 
-    def forward(self, inputs):
-        # 步骤 1: 接收批处理好的数据
-        padded_audios, output_text, audio_sample_lengths = inputs
-        batchsize = padded_audios.shape[0]
-        downsample_factor = 10 
-        
-        # 步骤 2: 批处理特征提取
-        with torch.no_grad():   
-            w = padded_audios.to(self.device) / 32768.0
-            # 这里的 '1' 就代表了单声道 (mono channel)
-            w = w.unsqueeze(1)
-            # w = w.float()
-            w = convert_audio(w, 16000, 24000, 1)
+        with torch.no_grad():
+            input_values = self.processor(audio,  return_tensors="pt", sampling_rate=16000, padding=True).input_values.to(self.device)
+            input_values=input_values.float()  #这里被我改成float32了
+            # print("input_values",input_values)
+            outputs = self.audio_model(input_values).last_hidden_state
+            # print("outputs:",outputs)
+            # print("outputs.shape:",outputs.shape)
+            time_len=outputs.shape[1]
+            padded_time_len=(time_len+9)//10*10
+            # print("padded_time_len",padded_time_len)
+            outputs=F.pad(outputs,(0,0,0,padded_time_len-time_len))
+            # print("outputs.shape",outputs.shape)
+            outputs=outputs.view(batchsize,-1,10240)
 
-            w = w.squeeze(1)
-            # bandwidth_id = torch.tensor([0] * batchsize, device=self.device)
-            bandwidth_id = torch.tensor([0], device=self.device)
-            # WavTokenizer 输出形状为 [B, D_feat, T_feat]
-            features, _ = self.wavtokenizer.encode_infer(w, bandwidth_id=bandwidth_id)
-            
-            # 【关键修正】交换维度，以匹配后续代码期望的 [B, T_feat, D_feat] 格式
-            features = features.transpose(1, 2).contiguous()
-            
-            # 使用辅助函数计算每个样本的真实特征长度 (结果是一个张量)
-            feat_lengths = self.calculate_feature_lengths(audio_sample_lengths)
+        # print("final_outputs:",outputs)
+        # audio_inputs=padded_audio_input_values.contiguous().view(batchsize,padded_time_len//10,-1)
+        audio_inputs=outputs.contiguous()
+        # print(audio_inputs.shape)
+        audio_inputs=self.audio_embedding_last_Linear(audio_inputs)
+        # print("audio_input:",audio_inputs)
+        audio_lengths = torch.tensor(audio_len)
 
-        # 步骤 3: 特征拼接与降采样 (完全向量化)
-        max_feat_len = features.shape[1]
-        feat_dim = features.shape[2]
-        
-        # 3.1 确保时间维度长度能被 downsample_factor 整除
-        padded_time_len = (max_feat_len + downsample_factor - 1) // downsample_factor * downsample_factor
-        padding_size = padded_time_len - max_feat_len
-        if padding_size > 0:
-            padded_features = F.pad(features, (0, 0, 0, padding_size))
-        else:
-            padded_features = features
-
-        # 3.2 使用 view() 进行拼接
-        stacked_features = padded_features.view(
-            batchsize, 
-            padded_features.size(1) // downsample_factor, 
-            feat_dim * downsample_factor
-        )
-
-        # 步骤 4: 高效计算下采样后的新长度
-        audio_lengths = (feat_lengths + downsample_factor - 1) // downsample_factor
-
-        # 步骤 5: 通过线性层
-        audio_inputs = self.audio_embedding_last_Linear(stacked_features)
-
-        # 步骤 6: 为LLM准备输入序列 (此处的循环是处理变长序列的正确方法)
-        x = []
-        bos_emb = self.bos_emb.unsqueeze(0).to(self.device).detach()
+        x=[]
+        len_x1=[]
+        bos_emb=self.bos_emb.unsqueeze(0).to(self.device).detach()
 
         for i in range(batchsize):
-            # 使用下采样后的 audio_lengths 进行切片，得到每个样本的有效部分
-            audio_input = audio_inputs[i, :audio_lengths[i], :]
-            input_x = torch.cat((bos_emb, audio_input), dim=0)
+            audio_input=audio_inputs[i,:audio_lengths[i],:]
+            #print(text_input_pre.shape,audio_input.shape,text_input_post.shape)
+            # eos_emb=self.eos_emb.unsqueeze(0).to(self.device).detach()
+            input_x=torch.cat((bos_emb,audio_input),dim=0)
             x.append(input_x)
-
-        # 将变长序列的列表重新填充为规整的批处理张量
+            # print("text_lengths[i],audio_lengths[i]",text_lengths[i],audio_lengths[i])
+            # print("input_x.shape[0]",input_x.shape[0])
+            len_x1.append(input_x.shape[0])
+        #x为一个list，保存的是每个batch的input，每一个元素代表一个text和一个audio拼接的input
+        #len_x为一个list，保存的是每个batch的input的长度
         padded_x = rnn_utils.pad_sequence(x, batch_first=True, padding_value=0)
-        x = padded_x 
+        x = torch.stack(list(padded_x), dim=0)
+        
+        texts=[text+self.text_tokenizer.eos_token for text in output_text]
+        texts=self.text_tokenizer(texts,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=False).to(self.device)
 
-        # 步骤 7: 后续流程 (保持不变，完全正确)
-        texts = [text + self.text_tokenizer.eos_token for text in output_text]
-        texts = self.text_tokenizer(texts, return_tensors="pt", padding="longest", truncation=True, add_special_tokens=False).to(self.device)
-
-        # prompt = "Identify the text corresponding to the speech: "
+        # print("Texts_token",texts)
+        # ---------------------------------------------PROMPT-------------------------------------------
+        # prompt = "Identify the text corresponding to the speech: "   # ASR
         prompt = "Identify the emotion corresponding to the speech: "    # ER
-        prompt = self.text_tokenizer(prompt, return_tensors="pt", padding="longest", truncation=True, add_special_tokens=False).to(self.device)
+        # prompt = "Identify the music genre corresponding to the audio: "     # music
+        # prompt = "Identify the urban sound category corresponding to the audio:"     #urbansound
+        # prompt = "Identify the intent corresponding to the speech: "               #IC
+        # prompt = "Identify the description corresponding to the audio:"       #clotho
+        # prompt = "Generate a caption for the music: "     #song describer
+        
+        prompt = self.text_tokenizer(prompt,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=False).to(self.device)
+        # ---------------------------------------------PROMPT-------------------------------------------
 
-        targets = texts["input_ids"].masked_fill(
+        # print("prompt:",prompt)
+        # print("pad_token_id:", self.text_tokenizer.pad_token_id)
+
+        targets=texts["input_ids"].masked_fill(
             texts.input_ids == self.text_tokenizer.pad_token_id, -100
         )
-        
+        # print("targets:",targets)
         with torch.no_grad():
-            texts_embes = self.llama.get_input_embeddings()(texts["input_ids"])
+            # print("texts[input_ids]:",texts["input_ids"])
+            texts_embes=self.llama.get_input_embeddings()(texts["input_ids"])
             prompt_embes = self.llama.get_input_embeddings()(prompt["input_ids"])
+        # --------------------------------------PROMPT---------------------------------------------------
+        batch_size = texts_embes.shape[0]
+        prompt_embes = prompt_embes.repeat_interleave(batch_size, dim=0)
 
-        prompt_embes = prompt_embes.repeat_interleave(batchsize, dim=0)
+        # print("shape:",x.shape,prompt_embes.shape,texts_embes.shape)
+        # --------------------------------------ATTENTION------------------------------------------------
+        inputs_embeds=torch.cat((x,prompt_embes,texts_embes),dim=1)  # 使用教师强制
+        # inputs_embeds=x  #注意这里，去掉了教师强制
+        # print(x.shape,texts_embes.shape,inputs_embeds.shape)
 
-        inputs_embeds = torch.cat((x, prompt_embes, texts_embes), dim=1)
+        attns_text=texts.attention_mask
+        attns_prompt = prompt.attention_mask
+        attns_prompt = prompt.attention_mask.repeat_interleave(batch_size, dim=0)
+        # print("attns_text",attns_text)
+        attns_audio=make_pad_mask_number(audio_lengths+1).to(x.device)
+        #加2是因为bos和eos
+        # --------------------------------------ATTENTION------------------------------------------------
+        attns=torch.cat((attns_audio,attns_prompt,attns_text),dim=1)  # 使用教师强制
+        # attns=attns_audio  # #注意这里，去掉了教师强制
 
-        attns_text = texts.attention_mask
-        attns_prompt = prompt.attention_mask.repeat_interleave(batchsize, dim=0)
-        
-        # 使用正确的、最终计算出的 audio_lengths 创建 attention mask
-        # +1 是因为我们在前面加了一个 bos_emb
-        attns_audio = make_pad_mask_number(audio_lengths + 1).to(x.device)
-        
-        attns = torch.cat((attns_audio, attns_prompt, attns_text), dim=1)
-
-        outputs = self.llama(
+        # print(attns_audio.shape,attns_text.shape,attns.shape)
+        # print("attns_audio:",attns_audio)
+        # print("attns_text:",attns_text)
+        # print("attns:",attns)
+        # print(inputs_embeds.shape,attns.shape,targets.shape)
+        # print("inputs_embeds:",inputs_embeds.shape,inputs_embeds)
+        outputs=self.llama(
             inputs_embeds=inputs_embeds,
             attention_mask=attns,
             return_dict=True
-        )
+            )
+        # print(outputs.keys())
+
+        # print("output:",outputs.shape,outputs)
+        hidden=outputs[0]
+        len_target=targets.shape[1]
+        # 去掉教师强制
         
-        hidden = outputs[0]
-        len_target = targets.shape[1]
-        
-        shift_logits = hidden[..., -len_target-1:-1, :].contiguous()
+        # shift_logits和lable的对应:
+        # 对应方式1:对齐除了bos以外的文本token
+        # shift_logits = hidden[..., -len_target:-1, :].contiguous()  # 对齐文本长度
+
+        # print("shift_logits:",shift_logits.shape,shift_logits)
+        # shift_labels = targets[...,1:].contiguous()
+
+        # print("shift_labels:",shift_labels.shape,shift_labels)
+        # 对应方式2:
+        shift_logits = hidden[..., -len_target-1:-1, :].contiguous()  # 从bos开始对齐
         shift_labels = targets.contiguous()
         
+        # 对应方式3:
+        # shift_logits = hidden.contiguous()  # 完整token列表尝试--报错,不行,其长度与target不一致
+
         loss_fct = self.loss_fn
+        # # 使用hidden的实际特征维度而不是直接使用vocab_size
         feature_dim = hidden.size(-1)
+        # # print("feature_dim: ",feature_dim)
         shift_logits = shift_logits.view(-1, feature_dim)
         shift_labels = shift_labels.view(-1)
         
-        loss = loss_fct(shift_logits, shift_labels)
+        loss = loss_fct(shift_logits, shift_labels)    # 这里是计算loss的输入
         
         return loss
-    
 
 
     def training_step(self,batch,batch_idx):
@@ -448,89 +423,94 @@ class IS(pl.LightningModule):
 
         return logits
 
-
-    def inference(self, inputs):
+    def inference(self,inputs):
         self.eval()
-        
-        # 1. 正确地解包来自 DataLoader 的三个元素
-        padded_audios, output_text, audio_sample_lengths = inputs
-        batchsize = padded_audios.shape[0]
-        
-        # ----------------------------------------------------------------------
-        # 2. 【核心重构】复用和 forward 函数完全相同的批处理前端逻辑
-        # ----------------------------------------------------------------------
+        audio,output_text=inputs
+        batchsize=len(audio)
+        #print(audio[0].shape[0])
+        audio_len=[audio[i].shape[0]//320-1 for i in range(batchsize)]
+        audio_len=[(i+9)//10 for i in audio_len]
+        # self.audio_model.eval()
+
         with torch.no_grad():
-            w = padded_audios.to(self.device) / 32768.0
+            input_values = self.processor(audio,  return_tensors="pt", sampling_rate=16000, padding=True).input_values.to(self.device)
+            input_values=input_values.float()
+            # print("inference_input_values",input_values)
+            outputs=self.audio_model(input_values,output_hidden_states=True)['hidden_states']
+            outputs=outputs[-1]
+            # print("inference_outputs:",outputs)
+            time_len=outputs.shape[1]
+            padded_time_len=(time_len+9)//10*10
+            # print(padded_time_len)
+            outputs=F.pad(outputs,(0,0,0,padded_time_len-time_len))
+            # print(outputs.shape)
+            outputs=outputs.view(batchsize,-1,10240)
+
+        # print("final_outputs:",outputs)
+        # audio_inputs=padded_audio_input_values.contiguous().view(batchsize,padded_time_len//10,-1)
+        audio_inputs=outputs.contiguous()
+
+        audio_inputs=self.audio_embedding_last_Linear(audio_inputs)
+        # print("audio_input:",audio_inputs)
+        # print(audio_len)
+        audio_lengths = torch.tensor(audio_len).to(self.device)
+        
+         # ---------------------------------------------PROMPT-------------------------------------------
+        # prompt = "Identify the text corresponding to the speech: "
+        prompt = "Identify the emotion corresponding to the speech: "    # ER
+        # prompt = "Identify the music genre corresponding to the audio: "     # music
+        # prompt = "Identify the urban sound category corresponding to the audio:"     #urbansound
+        # prompt = "Identify the intent corresponding to the speech: "               #IC
+        # prompt = "Identify the description corresponding to the audio:"       #clotho
+        # prompt = "Generate a caption for the music: "     #song describer
+
+        prompt = self.text_tokenizer(prompt,return_tensors="pt",padding="longest",truncation=True,add_special_tokens=False).to(self.device)
+
+        with torch.no_grad():
+            prompt_embes = self.llama.get_input_embeddings()(prompt["input_ids"])
+        prompt_embes = prompt_embes.squeeze(0)
+        # --------------------------------------PROMPT---------------------------------------------------
+
+        x=[]
+        len_x1=[]
+
+        bos_emb=self.bos_emb.unsqueeze(0).to(self.device).detach()
+
+        for i in range(batchsize):
+
+            audio_input=audio_inputs[i,:audio_lengths[i],:]
+            #print(text_input_pre.shape,audio_input.shape,text_input_post.shape)
             
-            # --- “三明治”包装法，确保函数安全调用 ---
-            w_for_convert = w.unsqueeze(1)
-            w_resampled = convert_audio(w_for_convert, 16000, 24000, 1)
-            w = w_resampled.squeeze(1)
-            # -----------------------------------------
-            
-            # 直接使用 Python 整数 0 作为 bandwidth_id
-            bandwidth_id = 0
-            features, _ = self.wavtokenizer.encode_infer(w, bandwidth_id=bandwidth_id)
-            
-            # 转置特征张量以匹配后续代码期望
-            features = features.transpose(1, 2).contiguous()
-            
-            # 使用辅助函数计算特征长度
-            feat_lengths = self.calculate_feature_lengths(audio_sample_lengths)
+            # print("bos,audio,prompt:",bos_emb.shape,audio_input.shape,prompt_embes.shape)
+            input_x=torch.cat((bos_emb,audio_input,prompt_embes),dim=0)  # 修改点，我这里加了bos
+            x.append(input_x)
+            #print(text_lengths[i],audio_lengths[i])
+            len_x1.append(input_x.shape[0])
 
-            downsample_factor = 10
-            
-            # 特征拼接与降采样 (完全向量化)
-            max_feat_len = features.shape[1]
-            feat_dim = features.shape[2]
-            padded_time_len = (max_feat_len + downsample_factor - 1) // downsample_factor * downsample_factor
-            padding_size = padded_time_len - max_feat_len
-            if padding_size > 0:
-                padded_features = F.pad(features, (0, 0, 0, padding_size))
-            else:
-                padded_features = features
+        # --- 【修改重点】改为手动左填充 (Left Padding) ---
+        
+        # 1. 获取最大长度
+        max_len = max(len_x1)
+        embed_dim = x[0].shape[-1]
 
-            stacked_features = padded_features.view(
-                batchsize, 
-                padded_features.size(1) // downsample_factor, 
-                feat_dim * downsample_factor
-            )
+        # 2. 初始化全0的 Embeddings 和 Attention Mask
+        # padding_value=0 对于 embedding 是合适的，前提是 mask 设置正确
+        padded_x = torch.zeros((batchsize, max_len, embed_dim), dtype=x[0].dtype, device=self.device)
+        attention_mask = torch.zeros((batchsize, max_len), dtype=torch.long, device=self.device)
 
-            audio_lengths = (feat_lengths + downsample_factor - 1) // downsample_factor
-            audio_inputs = self.audio_embedding_last_Linear(stacked_features)
-            
-            # ----------------------------------------------------------------------
-            # 3. 后续为 Llama.generate 准备输入的逻辑 (这部分保持不变)
-            # ----------------------------------------------------------------------
-            # prompt = "Identify the text corresponding to the speech: "
-            prompt = "Identify the emotion corresponding to the speech: "    # ER
-            prompt = self.text_tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to(self.device)
+        # 3. 填入数据（右对齐 = 左填充）
+        for i, seq in enumerate(x):
+            length = len_x1[i]
+            # 核心逻辑：数据放在每一行的 [max_len - length : ]
+            padded_x[i, max_len - length:, :] = seq
+            # Mask 对应位置设为 1
+            attention_mask[i, max_len - length:] = 1
 
-            with torch.no_grad():
-                prompt_embes = self.llama.get_input_embeddings()(prompt["input_ids"])
-            prompt_embes = prompt_embes.squeeze(0)
+        # print("padded_x (left padded):", padded_x.shape,padded_x)
+        # print("attention_mask (left padded):", attention_mask)
 
-            x = []
-            len_x1 = []
-            bos_emb = self.bos_emb.unsqueeze(0).to(self.device).detach()
-
-            for i in range(batchsize):
-                audio_input = audio_inputs[i, :audio_lengths[i], :]
-                input_x = torch.cat((bos_emb, audio_input, prompt_embes), dim=0)
-                x.append(input_x)
-                len_x1.append(input_x.shape[0])
-
-            max_len = max(len_x1)
-            embed_dim = x[0].shape[-1]
-
-            padded_x = torch.zeros((batchsize, max_len, embed_dim), dtype=x[0].dtype, device=self.device)
-            attention_mask = torch.zeros((batchsize, max_len), dtype=torch.long, device=self.device)
-
-            for i, seq in enumerate(x):
-                length = len_x1[i]
-                padded_x[i, max_len - length:, :] = seq
-                attention_mask[i, max_len - length:] = 1
-
+        # --- Generate 调用 ---
+        with torch.no_grad():
             outputs = self.llama.generate(              
                 inputs_embeds=padded_x,
                 attention_mask=attention_mask,
@@ -543,9 +523,12 @@ class IS(pl.LightningModule):
                 no_repeat_ngram_size=4
             )
         
-            outputs = self.text_tokenizer.batch_decode(
-                outputs,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=True
-            )
+        # print("outputbase:", outputs)
+
+        outputs = self.text_tokenizer.batch_decode(
+            outputs,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=True
+        )
         return outputs
+    
