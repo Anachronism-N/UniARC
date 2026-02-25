@@ -1,56 +1,49 @@
-# Comparative Analysis of Discrete and Continuous Space LLMs in Speech Recognition
+# UniARC: Unified Audio Representation Comparison
 
-This repository hosts the source code associated with the research paper titled "Comparative Analysis of Discrete and Continuous Space LLMs in Speech Recognition", which has been submitted to Interspeech 2024. The paper's link remains anonymous during the review process and will be made public once the paper is accepted.
+<p align="center">
+  <b>Evaluating Discrete Tokens and Continuous Features for Unified Audio Understanding in AudioLLMs</b><br>
+  <i>Submitted to Interspeech 2026</i>
+</p>
 
+## Overview
 
-![Overall architectures for continuous and discrete speech encoders. Figures (b) to (e) illustrate four distinct speech encoders, each extracting a different type of speech representation.](fig/fig1.png)
-Overall architectures for continuous and discrete speech encoders. Figures (b) to (e) illustrate four distinct speech encoders, each extracting a different type of speech representation.
+UniARC is a comprehensive evaluation framework designed to systematically benchmark and compare **discrete tokens** and **continuous features** for general audio understanding in Large Audio Language Models (AudioLLMs). 
 
-## Prerequisites and Installation
+Given the rapid development of AudioLLMs, the community has seen a shift from continuous features (e.g., HuBERT, WavLM, Whisper) to discrete tokens (e.g., DAC, SpeechTokenizer), and hybrid approaches. To address the lack of clear consensus on which paradigm is better for general audio understanding, this project conducts a systematic study across **Speech, Sound, and Music** domains using two complementary pipelines:
+1. **XARES-LLM Framework**: Instruction-tuning based on SmolLM2-135M and SmolLM2-360M using Low-Rank Adaptation (LoRA).
+2. **UniARC Pipeline**: A customized probing-based pipeline scaling up to Llama-3.2-1B and Llama-3.1-8B with frozen backbones.
 
-To ensure a smooth setup of the environment, install the necessary packages enumerated in the `requirements.txt` file with the following command:
+## Key Findings
 
+- **Semantic Compatibility is Key**: Explicit semantic alignment—rather than acoustic fidelity—is the decisive factor when designing representations for AudioLLMs.
+- **The "Acoustic Redundancy" Trap**: Reconstruction-focused codecs (e.g., DAC, WavTokenizer) often struggle with high-level semantic understanding due to excessive retention of low-level acoustic variations which act as noise.
+- **Power of Semantics in Tokens**: Semantically enriched tokenizers (e.g., SpeechTokenizer) can surprisingly surpass their continuous semantic teachers (e.g., HuBERT).
+- **Multi-domain Pre-training**: Scaling the LLM capacity cannot compensate for an encoder's insufficient semantic density. Comprehensive multi-domain pre-training (like WavLM and Whisper) is critical for general-purpose audio intelligence.
+- **Efficiency vs. Performance**: While continuous features may edge out in certain domains, discrete tokens significantly reduce sequence lengths and accelerate training convergence.
+
+## Documentation
+
+For comprehensive details about the project, framework architecture, and instructions on how to run the code, please refer to our dedicated documentation:
+
+- 📖 [**Project Description**](docs/PROJECT.md): Detailed information on the research background, supported architectures, evaluated tasks, and full repository structure.
+- 🚀 [**Usage Guide**](docs/USAGE.md): Step-by-step instructions for environment setup, data preparation, training, inference, and evaluation.
+
+## Supported Tasks
+
+Our evaluation spans 7 core tasks across 3 diverse domains:
+- **Speech**: Automatic Speech Recognition (LibriSpeech), Emotion Recognition (IEMOCAP, CREMA-D), Intent Classification (SLURP)
+- **Sound**: Urban Sound Classification (UrbanSound8K), Sound Captioning (Clotho)
+- **Music**: Genre Classification (GTZAN), Music Captioning (Song Describer Dataset)
+
+## Citation
+
+If you find our work useful, please consider citing our paper (BibTeX will be updated upon acceptance):
+
+```bibtex
+@inproceedings{uniarc2026,
+  title={Evaluating Discrete Tokens and Continuous Features for Unified Audio Understanding in AudioLLMs},
+  author={Peng, Jing and Nie, Zichao and Zhang, Zhisheng and Wu, Zhiyong},
+  booktitle={Interspeech 2026},
+  year={2026}
+}
 ```
-pip install -r requirements.txt
-```
-
-## Repository Structure and Content
-
-This repository comprises a `code` directory along with this `README.md` file. The `code` directory is further subdivided into five subdirectories: `dataset`, `inference`, `train`, `model`, and `module`.
-
-### Code
-
-#### Dataset
-
-The `dataset` subdirectory within `code` encompasses the dataloader and examples pertinent to the supervised discrete data experiments (#21-#29) discussed in the paper. Precisely, it aligns with experiment #27 featuring TextInputs @3. The examples for the validation and two test sets are housed in the `dataset/json` subdirectory. The training dataset, owing to its substantial size, will be made available post the paper's acceptance.
-
-#### Inference
-
-The `inference` subdirectory within `code` comprises inference scripts for a variety of models. In a similar vein, the `train` subdirectory includes training scripts for these models.
-
-#### Model
-
-The `model` subdirectory within `code` encapsulates different model architectures utilized in the experiments.
-
-#### Module
-
-The `module` subdirectory within `code` houses the modules that the models are dependent on.
-
-![Model Design for Discrete and Continuous Cases: In right fig, dashed lines show the data flow for the JTFS LM, and solid lines for the Llama2 model](fig/fig2.png)
-Model Design for Discrete and Continuous Cases: In right fig, dashed lines show the data flow for the JTFS LM, and solid lines for the Llama2 model.
-
-## Future Updates
-
-Given the extensive number of parameters in the models, it is not feasible to incorporate all the checkpoints in this repository simultaneously. Subsequent to the paper's acceptance, we plan to incrementally release the checkpoints.
-
-## Experiment Results
-
-The following figures represent the experimental results of our study.
-
-### JTFS LM Results
-
-<img src="fig/fig3.png" width="500px">
-
-### Llama2 Results
-
-<img src="fig/fig4.png" width="500px">
