@@ -1,0 +1,20 @@
+UniARC - Unified Audio Representation Comparison
+Copyright 2026 UniARC contributors.
+
+This distribution integrates research source snapshots from:
+  https://github.com/Anachronism-N/UniARC
+  commit 46ab7b41907c3e85c2fbd53b9ac225e27ce9902e (code/ subtree)
+  https://github.com/Anachronism-N/UniARC_paper
+  commit 49f21313d030ff573e50631f4a4ba065e5729d79 (xares-llm/ subtree)
+
+XARES-LLM is derived from https://github.com/xiaomi-research/xares-llm
+Copyright 2025 Horizon Team, MiLM Plus, Xiaomi Inc.
+Licensed under the Apache License, Version 2.0.
+Original copyright and license notices are retained in the source files.
+
+Integration modifications include portable configuration, launchers, dependency
+metadata, documentation, and fixes recorded in docs/migration.md and the backend
+READMEs. docs/source_manifest.json records included source-file provenance.
+
+Dataset contents and pretrained model weights are not distributed in this
+repository. Their original licenses and access terms continue to apply.

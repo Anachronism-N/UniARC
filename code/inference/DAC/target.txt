@@ -1,7 +1,0 @@
-this is a librivox recording.
-happy
-neutral
-angry
-happy
-neutral
-angry
