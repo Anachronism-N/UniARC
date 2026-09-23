@@ -1,0 +1,638 @@
+{
+  "format_version": 1,
+  "description": "Per-file provenance for imported paths. Newly added orchestration, tests, configs and documents are integration code. Hashes describe this curated source release.",
+  "sources": [
+    {
+      "name": "uniarc",
+      "repository": "https://github.com/Anachronism-N/UniARC",
+      "commit": "46ab7b41907c3e85c2fbd53b9ac225e27ce9902e",
+      "subtree": "code/",
+      "destination": "uniarc"
+    },
+    {
+      "name": "xares",
+      "repository": "https://github.com/Anachronism-N/UniARC_paper",
+      "commit": "49f21313d030ff573e50631f4a4ba065e5729d79",
+      "subtree": "xares-llm/",
+      "destination": "xares-llm"
+    }
+  ],
+  "files": [
+    {
+      "path": "uniarc/model/model_llama2_continus_prompt.py",
+      "source": "uniarc",
+      "original_path": "code/model/model_llama2_continus_prompt.py",
+      "upstream_git_blob_sha1": "6e15d1046c392acddb2b42b97f8f29dd761317ee",
+      "release_sha256": "bd7451ccde7f86fecc90eae1d7e1bd7e9a0d28b2e347580519ddbe89ae7070be",
+      "status": "modified"
+    },
+    {
+      "path": "uniarc/model/model_llama2_DAC_prompt.py",
+      "source": "uniarc",
+      "original_path": "code/model/model_llama2_DAC_prompt.py",
+      "upstream_git_blob_sha1": "43b2eff79002fc0e8e508df272ccfe788d385f55",
+      "release_sha256": "ad9ff942a6ee63189be91c9d5d57b86564b0cc74f473a1cea0f874209a68b823",
+      "status": "modified"
+    },
+    {
+      "path": "uniarc/model/model_llama2_speechtokenizer_prompt.py",
+      "source": "uniarc",
+      "original_path": "code/model/model_llama2_speechtokenizer_prompt.py",
+      "upstream_git_blob_sha1": "69fb2756fd2108ed761ba2307c053319fe14bec6",
+      "release_sha256": "948d6168f44b68b2af2ac070d8aed2f75db9f26ea4971540bb795561ab547f81",
+      "status": "modified"
+    },
+    {
+      "path": "uniarc/model/model_llama2_wavlm_prompt.py",
+      "source": "uniarc",
+      "original_path": "code/model/model_llama2_wavlm_prompt.py",
+      "upstream_git_blob_sha1": "f8de1b2d51d42eb072ce5009379a15ec523d56f2",
+      "release_sha256": "812d5d8ebba83689494dae9ae64e3a3076b3b6bf04c8051c60df329d8f59d060",
+      "status": "modified"
+    },
+    {
+      "path": "uniarc/model/model_llama2_wavtokenizer_prompt.py",
+      "source": "uniarc",
+      "original_path": "code/model/model_llama2_wavtokenizer_prompt.py",
+      "upstream_git_blob_sha1": "429254f29aafef0521ec1d99528e9ab5321385df",
+      "release_sha256": "c81e8151ba013a76eeabcafd14bab28b0c8be6c4eff460acad489d3d2711e6bc",
+      "status": "modified"
+    },
+    {
+      "path": "uniarc/module/utils.py",
+      "source": "uniarc",
+      "original_path": "code/module/utils.py",
+      "upstream_git_blob_sha1": "e27a535724800748b680d8e17d0b28b258a8460c",
+      "release_sha256": "4b66d0227df7005104a87cd60ab05c9b9f2e5cbb09bcd8bdc061f91f321ccfb9",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/example/dac/dac_encoder.py",
+      "source": "xares",
+      "original_path": "xares-llm/example/dac/dac_encoder.py",
+      "upstream_git_blob_sha1": "50824de1a1d789aa0becfc8c3b02e750c3c6ab4c",
+      "release_sha256": "a4a5c534180950554a6a1d276a1c6cd8c0b4003e7388887d71391f056e712444",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/example/dummy/dummyencoder.py",
+      "source": "xares",
+      "original_path": "xares-llm/example/dummy/dummyencoder.py",
+      "upstream_git_blob_sha1": "5607a53023628a1f8cb6652ea3f4d2af7e1140aa",
+      "release_sha256": "ac994c303e2a0d69144a5fd5470f026810b738eab23291c924071e5bdbe61542",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/example/hubert-kmeans/hubert_kmeans_encoder.py",
+      "source": "xares",
+      "original_path": "xares-llm/example/hubert-kmeans/hubert_kmeans_encoder.py",
+      "upstream_git_blob_sha1": "51e7228d7c45fb4d920c8a3fcda07d5d33a7c0ca",
+      "release_sha256": "c66a0e322d8a8f95690c785dc7482fa8194984b5410c9482c2dcc2ab052341ad",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/example/hubert-large/hubertlarge.py",
+      "source": "xares",
+      "original_path": "xares-llm/example/hubert-large/hubertlarge.py",
+      "upstream_git_blob_sha1": "fd35d27ce9dab21cc74257def62d2b16c29e0fc5",
+      "release_sha256": "84c3c8af949e44fb13db7e3ae916a6858bd0f1d5e39199216d16721143e000af",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/example/speechtokenizer/st_encoder.py",
+      "source": "xares",
+      "original_path": "xares-llm/example/speechtokenizer/st_encoder.py",
+      "upstream_git_blob_sha1": "abbc84ca88abb61a8ea55f07b5ba32c96a8f7a93",
+      "release_sha256": "8f516437d0490d2d1c60002f5cedfa9c460ff493ed8b9d288526fc24a950a489",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/example/wav2vec-large/wav2vec_large.py",
+      "source": "xares",
+      "original_path": "xares-llm/example/wav2vec-large/wav2vec_large.py",
+      "upstream_git_blob_sha1": "4b9db651e714d68650135ca2890aaf806c4ac132",
+      "release_sha256": "ab3b09b4e248be89eaf679b6c5cf7a27ce0cf3e2cfdcfc01cf1dbdd125b54a85",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/example/wavlm-kmeans/wavlm_kmeans_encoder.py",
+      "source": "xares",
+      "original_path": "xares-llm/example/wavlm-kmeans/wavlm_kmeans_encoder.py",
+      "upstream_git_blob_sha1": "eb58252199dd4baf4f3919fbc4f138e347f5303a",
+      "release_sha256": "c522a16fc12e3cb452d953b8803320b15d2993fe1dd777952127b1ae5cd7b3c9",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/example/wavlm_large/wavlm_large.py",
+      "source": "xares",
+      "original_path": "xares-llm/example/wavlm_large/wavlm_large.py",
+      "upstream_git_blob_sha1": "3e54c71498ef41fb1ff72bd1161f8167694fb5ab",
+      "release_sha256": "b3999366f6efb12e1e83150fe101250f9a9552a1a4dba42cd684750efa175987",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/example/wavtokenizer-large/wavtokenizer_encoder.py",
+      "source": "xares",
+      "original_path": "xares-llm/example/wavtokenizer-large/wavtokenizer_encoder.py",
+      "upstream_git_blob_sha1": "6f3e71ce74a2297d5689356091d1cd53ba2e98c2",
+      "release_sha256": "31fbacbf99e12db33f2f9ffae3350ff493f4fdc0a5967a4d637f7271d4d5c5d2",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/example/whisper-large-v3/whisper_encoder.py",
+      "source": "xares",
+      "original_path": "xares-llm/example/whisper-large-v3/whisper_encoder.py",
+      "upstream_git_blob_sha1": "7308097455da035aaa4de18bb0be795ff40320ec",
+      "release_sha256": "06dd2491433fc3b4650427884224b07ed00784a51189a8a31f06a9c027e4ccaa",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/LICENSE",
+      "source": "xares",
+      "original_path": "xares-llm/LICENSE",
+      "upstream_git_blob_sha1": "f49a4e16e68b128803cc2dcea614603632b04eac",
+      "release_sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/pyproject.toml",
+      "source": "xares",
+      "original_path": "xares-llm/pyproject.toml",
+      "upstream_git_blob_sha1": "63800f25f7b8a3f1589a300556bf013fe549f47b",
+      "release_sha256": "e8f996cd11c9587e2028eaba3d44e46a25db4c7fc5722837e64bcfa99862be4c",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/README.md",
+      "source": "xares",
+      "original_path": "xares-llm/README.md",
+      "upstream_git_blob_sha1": "744c903b37b26b878188fd82d478e4b3fe3e1913",
+      "release_sha256": "5a885dc9e1f4b7a887e40dac466ec7fe4aa0d17786fcb657fedaa249974b373b",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/__init__.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/__init__.py",
+      "upstream_git_blob_sha1": "b8cad2b9a77aefaed199d18e48c84c22f8cff04d",
+      "release_sha256": "aa57478e3d2936ef34f5b8f6b3af3e1accaf6dd211a55cab7f5d2b9b06dc6e53",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/audio_encoder_checker.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/audio_encoder_checker.py",
+      "upstream_git_blob_sha1": "951d71a3e0c24bd11d1f5f25936689f0cd1607bd",
+      "release_sha256": "f7f64b56b362c658fad4a38968fec1cb444559fe016e750e0436b10bff2bb7ec",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/audiowebdataset.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/audiowebdataset.py",
+      "upstream_git_blob_sha1": "43b946ffcaf58bf87adb658150e991581a6e8cbd",
+      "release_sha256": "0e0bba8e1f56d48a4ee0a6ff4668790590c9ff62f50b488a57d2611c5d20e52c",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/download_data.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/download_data.py",
+      "upstream_git_blob_sha1": "23eada4255b2122ead3bfb35b17198092510ff54",
+      "release_sha256": "df72f56211b1f1b7c96a455dbe7f0378f50bfa171b6e9d5d6a305b2518dc97c8",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/metrics.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/metrics.py",
+      "upstream_git_blob_sha1": "a88384899cd4b953e6c26d8f6a6fd1732d0c49f7",
+      "release_sha256": "2fe08b604b6fdd5817ff0062b0709334ed0822116e3dc5d8944c6b5a0579687f",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/modeling_audiollm/__init__.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/modeling_audiollm/__init__.py",
+      "upstream_git_blob_sha1": "cc49873c70d9182d5a453dc8dad2822e81979eb7",
+      "release_sha256": "3ecafecaa3e374b6e30c3eb002b82d7ff41ba3e708454bec7a3b1dc0d6b10a69",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/modeling_audiollm/configuration_xaresllm.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/modeling_audiollm/configuration_xaresllm.py",
+      "upstream_git_blob_sha1": "c74fa8f3a704d1a469bc6b94d85d72887c6e05e9",
+      "release_sha256": "759ff545611ebea91e379aff1574366ebaad7e12b6846087183bbdaf75449632",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/modeling_audiollm/modeling_xaresllm.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/modeling_audiollm/modeling_xaresllm.py",
+      "upstream_git_blob_sha1": "6e0df1e37bd0971ca9de7078211d90f5230287e1",
+      "release_sha256": "0ab9b32fa5883c6557e3626b97cf96654ceb2fe79ec9c5f3fd9570b48ccfde60",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/run.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/run.py",
+      "upstream_git_blob_sha1": "128cfb85e0cb404a170bbae94b19b7b4f3258240",
+      "release_sha256": "813da9f00a2f534e39656ac3744cebe98b1129767e9c38767747edb255b0807a",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/task.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/task.py",
+      "upstream_git_blob_sha1": "bb4bd0ae8ea2d993bd2fb50edd4a1878c1b7429e",
+      "release_sha256": "918c2b6f8fda455755fd02f3d2cb1cfd4d6dd373b6b821c9a02a0ef242896e47",
+      "status": "modified"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/all/eval/evaluation_all.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/all/eval/evaluation_all.yaml",
+      "upstream_git_blob_sha1": "b1e5218ab71ea55a754700a4c077509d1ef0945d",
+      "release_sha256": "ee777714fe10f6f7e1b022953898c71514fac52745db0191ae3b476e4ddf40a0",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/all/train/all_train_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/all/train/all_train_config.yaml",
+      "upstream_git_blob_sha1": "042c8db7dd37b7dadf8c88f875b28e57af9e6e1a",
+      "release_sha256": "bf89850ae5cf5fc90705006e105bc54ae0a30fddb39519cdd19401174ce15c0c",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/aishell-1_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/aishell-1_test_config.yaml",
+      "upstream_git_blob_sha1": "950f3a4c686936151036628262632fcea169a392",
+      "release_sha256": "a632037d2632274b649657adf57ba516aad932f73568260775257ba73dcf29d9",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/asvspoof2015_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/asvspoof2015_test_config.yaml",
+      "upstream_git_blob_sha1": "5e4bb4e82766b087412d8992ddcd65a129a9d63d",
+      "release_sha256": "cc0f23ddf9a38c80c53321c5537b3e496ecf591224b04c8f97288dff6c35aee3",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/clotho_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/clotho_test_config.yaml",
+      "upstream_git_blob_sha1": "933c8954561aa0b86c0d27a523ddcb6af50a8dd5",
+      "release_sha256": "dd3a9e45071d1e1376a116d147ae7bd6c6a0254ead23073de23f096d0ebae233",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/cremad_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/cremad_test_config.yaml",
+      "upstream_git_blob_sha1": "de4d427bf8eba549219738d0f48d627124135519",
+      "release_sha256": "ef5fa47a78543fb80cc1001898ad7f58b76982be240a83dc76bdc18e88a92421",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/esc-50_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/esc-50_test_config.yaml",
+      "upstream_git_blob_sha1": "37b70a52ea35a5c040b9785a01256a91dc5d3bd7",
+      "release_sha256": "e4ecb50ad33e654daa2c059b41f58b74971bbfedb13f89fbefe5fd97e30fc13a",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/fluentspeechcommands_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/fluentspeechcommands_test_config.yaml",
+      "upstream_git_blob_sha1": "b5fc500ba2c6e9683b6c2f13c3ecf7a4a0f2dd1b",
+      "release_sha256": "4ac4c7c450e8dd23f1e2a1c2556425b1119fa8bb6995a961186286d9f084cc12",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/freemusicarchive_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/freemusicarchive_test_config.yaml",
+      "upstream_git_blob_sha1": "e862e94f3beb2c5a3fdf4263253419f7a8a44730",
+      "release_sha256": "507002bf391610501a9c78359fea8d595aa05853f48cbe1bd41d01b9f547f676",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/fsd50k_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/fsd50k_test_config.yaml",
+      "upstream_git_blob_sha1": "d5457cddfa21a7f8be06293a266e9ce3b91215d8",
+      "release_sha256": "d49b14b983630f51a18270fcd53b074d194e63ffef8ab5ed2470565e445058a8",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/fsdkaggle2018_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/fsdkaggle2018_test_config.yaml",
+      "upstream_git_blob_sha1": "8f0c5a7f7b5ab0add72f818356971f56d19d0e5a",
+      "release_sha256": "053208129ff9566344b5e731dd65f2f35cb340e14d36b594cef21e44df845b26",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/gtzan_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/gtzan_test_config.yaml",
+      "upstream_git_blob_sha1": "54f6473da48df463c7f304d22e5f235ed98c818d",
+      "release_sha256": "f9b437362fa4f3f4d0a04ad1102eeb0ada6c49226b7316dbefa184e06c553f8e",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/libricount_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/libricount_test_config.yaml",
+      "upstream_git_blob_sha1": "1914ee0746f05174e0e966c974824d2e66eb808e",
+      "release_sha256": "08c9186f7d84409c62e08214292af8b4851121bd236b954d9eb796aa9771d9b8",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/librispeech_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/librispeech_test_config.yaml",
+      "upstream_git_blob_sha1": "3e6029041570f24a3e65156d1ab0780316801d0d",
+      "release_sha256": "240b7ee758045531edc36ad18f05fb4ba4b3c9388039448caa01b438dd3839e1",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/mecat_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/mecat_test_config.yaml",
+      "upstream_git_blob_sha1": "f5e65ee04be752ee1816abf0ae8d5ed9fdf9d6c4",
+      "release_sha256": "f92fd315d33ede77cc88ad88b756ef418d48c7f1f89afc016a659f836e2fbd55",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/nsynth_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/nsynth_test_config.yaml",
+      "upstream_git_blob_sha1": "e71e6b931384fbb2d8edfe46c24d5258acfc1d38",
+      "release_sha256": "aead82b17348ff88f12d8af4b8cef85a61e979dab54d7cf99ce509288847baf2",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/songdescriber_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/songdescriber_test_config.yaml",
+      "upstream_git_blob_sha1": "206eef91e4b97f155a6a7455dffa829c78f11d96",
+      "release_sha256": "b052798789a2f47243e0aab370c551d8269065ae3f2deecc14560e3acc246a8a",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/speechcommandsv1_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/speechcommandsv1_test_config.yaml",
+      "upstream_git_blob_sha1": "02693db3a1b22eb04d9eedf6910dc074d4dde19f",
+      "release_sha256": "0b5b5b6c351e41b875e9879a0449ef788f3dcbb88b16da5465147918f90c2f6d",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/urbansound8k_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/urbansound8k_test_config.yaml",
+      "upstream_git_blob_sha1": "298af63b68e3461c4cd6dbe3a3b6f60950059596",
+      "release_sha256": "b6eb3e6ef8de60a90d26a963f39deea887f893a747350a8a01c00499be6f5eb8",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/vocalsound_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/vocalsound_test_config.yaml",
+      "upstream_git_blob_sha1": "72254a80d1ecfabb57e30be0fc9f820a42ae4aad",
+      "release_sha256": "f6a2feaf3a8b94787a62fef3c325e311a7fc8da2df930dcdd93f254aa0232137",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/voxceleb1_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/voxceleb1_test_config.yaml",
+      "upstream_git_blob_sha1": "c6e3e14623583f4d85747d0e674c6c44e63b5e00",
+      "release_sha256": "7a1501daee6db87dab2b9f7a1083985a7bfbd49ac3ea923ac7c17de39e596ab7",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/eval/voxlingua33_test_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/eval/voxlingua33_test_config.yaml",
+      "upstream_git_blob_sha1": "2279c5360588d3bd901ca08d3d525010b51c6a32",
+      "release_sha256": "058c6f25ccdf11e1ae8db9580992f12e23ed5bc3c01c20123baf537c0ec5522b",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/aishell-1_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/aishell-1_config.yaml",
+      "upstream_git_blob_sha1": "317db80984dbdc7ec66cb75b2250f4266c4966de",
+      "release_sha256": "7a2997a93b39392834955b2d1b5238cbd187d71003617d6f60da0ad079f0a108",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/asvspoof2015_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/asvspoof2015_config.yaml",
+      "upstream_git_blob_sha1": "25b623e48e5af7dbcac8afa43dda0bd66e4c23bb",
+      "release_sha256": "d759afc7dcb132c4bfbaba9040e61cfd43b9f14e56853627938633af7a17ea64",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/clotho_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/clotho_config.yaml",
+      "upstream_git_blob_sha1": "230a0a66d50dd1712b83d2fd5d7758dfe2294e3e",
+      "release_sha256": "5f0cc9308a55ed53cb0b31a265d8335b0be66f368ec87b0c8930c28fd4867006",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/cremad_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/cremad_config.yaml",
+      "upstream_git_blob_sha1": "860fded748af7edbf9edbfde03b5538e577331f4",
+      "release_sha256": "e047ef3e96b8889960270f33b070ff3f6fbafaec4e0e795e93d9ce9192bb046f",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/esc-50_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/esc-50_config.yaml",
+      "upstream_git_blob_sha1": "9c876efcf671cf248452d3edf3b0efa2d605e14f",
+      "release_sha256": "56e6070c648d3c3a190adf96dec2c89570a9c290d0682a4eec417e25932e6286",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/fluentspeechcommands_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/fluentspeechcommands_config.yaml",
+      "upstream_git_blob_sha1": "a13c416c5d51050eea5574bc11ad2cbdc3b8f815",
+      "release_sha256": "081a58fd1335a53a72dae6de22f29b95c7029b257eb82e34221f1cb0987a64b9",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/freemusicarchive_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/freemusicarchive_config.yaml",
+      "upstream_git_blob_sha1": "4220f97da245595caff05f879632329ae57d1ea1",
+      "release_sha256": "62b83acf417fa7c7656dbefdd250f56095f198fca56d3ab50a2e774fb9295ec5",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/fsd50k_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/fsd50k_config.yaml",
+      "upstream_git_blob_sha1": "f646095cda7d8c91b6c10ad25ffbd8b3eeade045",
+      "release_sha256": "ae634f124f1d316c2f7ba2a6f8c3697fae34d98c0fdc8a8ccce2c773410de891",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/fsdkaggle2018_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/fsdkaggle2018_config.yaml",
+      "upstream_git_blob_sha1": "04c924c72c1717eda437cbbd93c55bb233a0f5fa",
+      "release_sha256": "3e9ac812953818f9a07a7b0d63ec0241cfd660a173da7341be2c1aa7cb75587f",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/gtzan_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/gtzan_config.yaml",
+      "upstream_git_blob_sha1": "fe9cee5afd1b4f49209ce9e6b6637136ca2e0038",
+      "release_sha256": "b5ded9c5c467270dce9cbf0ce793d9f05393aa288fd32f5712f5c090c7687960",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/libricount_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/libricount_config.yaml",
+      "upstream_git_blob_sha1": "53adc5349985f4ae009e78c56f221419e5488eb6",
+      "release_sha256": "e53f1ccc6613098edeb150d13391c38687fadf3eb257a9d271cba1cac54682ba",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/librispeech_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/librispeech_config.yaml",
+      "upstream_git_blob_sha1": "66ebb70ea1a682b9f53e93226cd4930241c92ee5",
+      "release_sha256": "07c3c92abc1418ed78a7424cc27fdb5e25c18706f96af4d0aa805ba827f1e099",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/mecat_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/mecat_config.yaml",
+      "upstream_git_blob_sha1": "9f31ba2707c9ebb8253f8c1b564eb9b8d977ee47",
+      "release_sha256": "3c3d137c6417875bab0147ecc61dbfbe183192b0838ff15bb8a2693a510958fe",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/nsynth_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/nsynth_config.yaml",
+      "upstream_git_blob_sha1": "ca4117c260b95c0156b5c2c0a8ec8c2e36b2a108",
+      "release_sha256": "531f5e4d8fed515dbd9907abb0f9cdc173b104a36e2a482b8e3615bd2c8c79c2",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/songdescriber_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/songdescriber_config.yaml",
+      "upstream_git_blob_sha1": "f9d1bab70576fb4fac5ce66b275abad2b48f60eb",
+      "release_sha256": "f373a5f88788f96ac69627abf91a8f7821f675842a400311e4d2af04b7f35f37",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/speechcommandsv1_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/speechcommandsv1_config.yaml",
+      "upstream_git_blob_sha1": "40ad16f2094c42bd82b29a88232eecae276feac2",
+      "release_sha256": "eebcd15ac47d6c773516cf3356b827e1d14102362733c719dcb9737412f57bbe",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/urbansound8k_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/urbansound8k_config.yaml",
+      "upstream_git_blob_sha1": "255f2e9372c815a1af8dac52b143bdc8e68de59b",
+      "release_sha256": "9156f42afd1adb70e1a47a98f4baf4f0d69431f23d98e78b86a0dad18b994b5d",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/vocalsound_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/vocalsound_config.yaml",
+      "upstream_git_blob_sha1": "b9ee0f9881d10cb243fab5122feb581a003ddff3",
+      "release_sha256": "d0bc51cff169a732f32534183e46e5fd14ffb30558b1ec016be19eccdf040ebc",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/voxceleb1_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/voxceleb1_config.yaml",
+      "upstream_git_blob_sha1": "a58ca8a38ddfacf49e96c121a16cb16c0c4555a0",
+      "release_sha256": "f74505fbcc9e33db8d5a16cb4951f2eb150543ece6ae6ad545dbf75bfb4f8011",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/single/train/voxlingua33_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/single/train/voxlingua33_config.yaml",
+      "upstream_git_blob_sha1": "43f554e55f5fae2cac2f10fcf83ff308108950c4",
+      "release_sha256": "79444257b020d4c122f9ea232fe4b7539aa0161af183f282848520717c866a26",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/task1/eval/eval_task1_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/task1/eval/eval_task1_config.yaml",
+      "upstream_git_blob_sha1": "85e52b8e68563a7b5e1c9b1926f439712082ea10",
+      "release_sha256": "c47702ee25997229e9b049fdd30a3784e50ba5db484f28ef0a83e762de4d4a99",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/task1/train/train_task1_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/task1/train/train_task1_config.yaml",
+      "upstream_git_blob_sha1": "8dc2a8ad662a2e1a7146e60e64e5ec0592dff2fe",
+      "release_sha256": "0975639f9c8dbcf7f7ab9d89e532d57ae71c41475a0a9217d8b4b87048a05608",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/task2/eval/eval_task2_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/task2/eval/eval_task2_config.yaml",
+      "upstream_git_blob_sha1": "a494f4ae8e72d9951ea078a8c26be396f1136607",
+      "release_sha256": "cdb998ab1a7a7d292b80fd1ac31eee033cd15fac408ea3f4ca955dff27771073",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/tasks/task2/train/train_task2_config.yaml",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/tasks/task2/train/train_task2_config.yaml",
+      "upstream_git_blob_sha1": "da22a56de7d23ffe0efad9d37771fe2b50c879fc",
+      "release_sha256": "8d318e0813e60a8248250d26e9e86ca30153402a601d84ca253e6571901cdfc0",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/trainer.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/trainer.py",
+      "upstream_git_blob_sha1": "b8db978b51ad6638b305d62ce364e677751f4933",
+      "release_sha256": "c78a29d2bdd898e13d3d24cfe78df14b9854c45db6c4b1a57a8cb3e67c37cf69",
+      "status": "unchanged"
+    },
+    {
+      "path": "xares-llm/src/xares_llm/utils.py",
+      "source": "xares",
+      "original_path": "xares-llm/src/xares_llm/utils.py",
+      "upstream_git_blob_sha1": "15cbbdcd907b5dfaeeb910e0e3576553069e7f05",
+      "release_sha256": "58c582c4cff2b73b00a4705955a7853c95e7862d4a9eaafe112d2455f4a71f64",
+      "status": "modified"
+    }
+  ]
+}

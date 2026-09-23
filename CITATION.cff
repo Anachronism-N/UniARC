@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: >-
+  Cite this software and the corresponding UniARC manuscript when using this
+  repository. The supplied manuscript is anonymous; final paper authors,
+  venue metadata, and DOI must be confirmed before adding a preferred citation.
+type: software
+title: 'UniARC: Unified Audio Representation Comparison'
+authors:
+  - name: UniARC contributors
+license: Apache-2.0
+abstract: >-
+  Unified source distribution for the two evaluation strategies in
+  Discrete vs. Continuous: A Comprehensive Study of Unified Audio Understanding
+  in LALMs: XARES-LLM-based parameter-efficient fine-tuning and frozen-backbone
+  probing.
+keywords:
+  - audio understanding
+  - audio language models
+  - representation learning

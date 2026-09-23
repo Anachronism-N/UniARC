@@ -1,7 +1,0 @@
-参数映射报告 - 2025-11-14 16:50:34
-检查点文件: /commondocument/group2/ASRCompare/code/model/ckpt/epoch=46-train_loss=5.270-val_loss=0.001.ckpt
-
-=== 模型与检查点参数统计 ===
-模型参数总数: 572
-检查点参数总数: 573
-直接匹配的参数数: 572

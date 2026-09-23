@@ -1,0 +1,22 @@
+name: Source checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  source:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.10', '3.12']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python scripts/check_release.py
+      - run: python -m unittest discover -s tests -v
+      - run: python -m unittest discover -s uniarc/tests -v
+      - run: python run.py --show-command xares --help
+      - run: python run.py probe --help
+      - run: python run.py xares --help

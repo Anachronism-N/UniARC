@@ -1,0 +1,65 @@
+# Modified for the UniARC unified source release; see README.md.
+[build-system]
+requires = ["setuptools >= 77.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xares-llm"
+version = "0.0.11"
+description = "eXtensive Audio Representation and Evaluation Suite - Large Language Model"
+dependencies = [
+  "loguru",
+  "numpy",
+  "jiwer",
+  "scikit-learn",
+  "torch>=2.2.1",
+  "torchaudio>=2.2.1",
+  "torchmetrics>=1.6.1",
+  "pandas>=2.2.3",
+  "transformers>=4.57.3,<5",
+  "tqdm",
+  "webdataset>=1.0",
+  "torchcodec>=0.8.0",
+  "accelerate>=1.10.1",
+  "peft>=0.18.0",
+  "mecat>=1.1.0",
+  "PyYAML>=6",
+  "huggingface-hub>=0.36,<1",
+  "braceexpand>=0.1.7",
+]
+authors = [
+  {name = "Heinrich Dinkel", email = "dinkelheinrich@xiaomi.com"},
+  {name = "Xiyang Li", email = "lixiyang@xiaomi.com"},
+  {name = "Junbo Zhang", email = "zhangjunbo1@xiaomi.com"},
+  {name = "Yadong Niu", email = "niuyadong@xiaomi.com"},
+  {name = "Jiahao Zhou", email = "zhoujiahao5@xiaomi.com"},
+]
+readme = "README.md"
+requires-python = ">=3.10"
+license-files = ["LICENSE"]
+
+
+[project.urls]
+Upstream = "https://github.com/xiaomi-research/xares-llm"
+
+[project.optional-dependencies]
+kmeans = ["faiss-cpu>=1.8"]
+speechtokenizer = ["speechtokenizer"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+xares_llm = [
+  "tasks/all/eval/*yaml",
+  "tasks/all/train/*yaml",
+  "tasks/task1/eval/*yaml",
+  "tasks/task1/train/*yaml",
+  "tasks/task2/eval/*yaml",
+  "tasks/task2/train/*yaml",
+  "tasks/single/eval/*.yaml",
+  "tasks/single/train/*.yaml",
+]
