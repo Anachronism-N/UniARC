@@ -3,8 +3,8 @@
 **Unified Audio Representation Comparison** for the manuscript
 **Discrete vs. Continuous: A Comprehensive Study of Unified Audio Understanding in LALMs**.
 
-[����˵��](README.zh-CN.md) �� [Paper-to-code mapping](docs/paper_mapping.md) ��
-[Data and models](docs/data_and_models.md) �� [Integration history](docs/migration.md)
+[中文说明](README.zh-CN.md) · [Paper-to-code mapping](docs/paper_mapping.md) ·
+[Data and models](docs/data_and_models.md) · [Integration history](docs/migration.md)
 
 UniARC compares continuous audio features and discrete audio representations
 across speech, sound, and music. This repository brings the two evaluation

@@ -56,6 +56,8 @@ def check(root=ROOT):
         except UnicodeError:
             errors.append(f"non-text source file: {relative}")
             continue
+        if "\ufffd" in content:
+            errors.append(f"Unicode replacement character; possible encoding damage: {relative}")
         if any(pattern.search(content) for pattern in SECRET_PATTERNS):
             errors.append(f"possible credential (value withheld): {relative}")
         if path.suffix in {".py", ".json", ".yaml", ".yml", ".toml", ".sh"}:
